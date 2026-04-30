@@ -173,6 +173,11 @@
         <button id="pauseBtn" disabled>Pause</button>
         <button id="resumeBtn" disabled>Resume</button>
         <button id="stepBtn" disabled>Step</button>
+
+        <label>
+            Sound
+            <input id="soundToggle" type="checkbox" />
+        </label>
     </div>
 
     <div id="stats" class="stats">
@@ -191,6 +196,7 @@
         const pauseBtn = document.getElementById("pauseBtn");
         const resumeBtn = document.getElementById("resumeBtn");
         const stepBtn = document.getElementById("stepBtn");
+        const soundToggle = document.getElementById("soundToggle");
         const algorithmSelect = document.getElementById("algorithmSelect");
         const sizeSlider = document.getElementById("sizeSlider");
         const speedSlider = document.getElementById("speedSlider");
@@ -209,6 +215,7 @@
         let swaps = 0;
         let sortStartTime = 0;
         let timerInterval = null;
+        let audioContext = null;
 
         function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
@@ -265,13 +272,43 @@
             }
         }
 
-        function addComparison(amount = 1) {
+        function playSound(value, type = "compare") {
+            if (!soundToggle.checked) return;
+
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            const oscillator = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+
+            const frequency = 150 + value * 2;
+            oscillator.frequency.value = frequency;
+            oscillator.type = type === "swap" ? "square" : "sine";
+
+            gain.gain.setValueAtTime(0.04, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.05);
+
+            oscillator.connect(gain);
+            gain.connect(audioContext.destination);
+
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.05);
+        }
+
+        function addComparison(amount = 1, soundValue = null) {
             comparisons += amount;
+            if (soundValue !== null) {
+                playSound(soundValue, "compare");
+            }
             updateStats();
         }
 
-        function addSwap(amount = 1) {
+        function addSwap(amount = 1, soundValue = null) {
             swaps += amount;
+            if (soundValue !== null) {
+                playSound(soundValue, "swap");
+            }
             updateStats();
         }
 
@@ -326,7 +363,8 @@
         async function markAllSorted() {
             for (let i = 0; i < values.length; i++) {
                 renderBars([], [], Array.from({ length: i + 1 }, (_, index) => index));
-                await sleep(10);
+                playSound(values[i], "compare");
+                await sleep(18);
             }
         }
 
@@ -340,6 +378,7 @@
             pauseBtn.disabled = !disabled;
             resumeBtn.disabled = true;
             stepBtn.disabled = !disabled;
+            soundToggle.disabled = false;
 
             if (!disabled) {
                 isPaused = false;
@@ -383,11 +422,11 @@
                     renderBars([j, j + 1], [], getSortedTail(i));
                     await waitForNextAction();
 
-                    addComparison();
+                    addComparison(1, values[j]);
 
                     if (values[j] > values[j + 1]) {
                         [values[j], values[j + 1]] = [values[j + 1], values[j]];
-                        addSwap();
+                        addSwap(1, values[j]);
                         renderBars([], [j, j + 1], getSortedTail(i));
                         await waitForNextAction();
                     }
@@ -405,7 +444,7 @@
                     renderBars([minIndex, j], [], sorted);
                     await waitForNextAction();
 
-                    addComparison();
+                    addComparison(1, values[j]);
 
                     if (values[j] < values[minIndex]) {
                         minIndex = j;
@@ -414,7 +453,7 @@
 
                 if (minIndex !== i) {
                     [values[i], values[minIndex]] = [values[minIndex], values[i]];
-                    addSwap();
+                    addSwap(1, values[j]);
                     renderBars([], [i, minIndex], sorted);
                     await waitForNextAction();
                 }
@@ -434,21 +473,21 @@
                 await waitForNextAction();
 
                 while (j >= 0) {
-                    addComparison();
+                    addComparison(1, values[j]);
 
                     if (values[j] <= current) {
                         break;
                     }
 
                     values[j + 1] = values[j];
-                    addSwap();
+                    addSwap(1, values[j]);
                     renderBars([j, j + 1], [j + 1], sorted);
                     await waitForNextAction();
                     j--;
                 }
 
                 values[j + 1] = current;
-                addSwap();
+                addSwap(1, values[j]);
                 sorted.push(i);
             }
         }
@@ -474,7 +513,7 @@
             let mainIndex = start;
 
             while (leftIndex < left.length && rightIndex < right.length) {
-                addComparison();
+                addComparison(1, values[mainIndex]);
                 renderBars([start + leftIndex, middle + 1 + rightIndex], [mainIndex], []);
                 await waitForNextAction();
 
@@ -486,7 +525,7 @@
                     rightIndex++;
                 }
 
-                addSwap();
+                addSwap(1, values[j]);
                 renderBars([], [mainIndex], []);
                 await waitForNextAction();
                 mainIndex++;
@@ -494,7 +533,7 @@
 
             while (leftIndex < left.length) {
                 values[mainIndex] = left[leftIndex];
-                addSwap();
+                addSwap(1, values[j]);
                 renderBars([start + leftIndex], [mainIndex], []);
                 await waitForNextAction();
                 leftIndex++;
@@ -503,7 +542,7 @@
 
             while (rightIndex < right.length) {
                 values[mainIndex] = right[rightIndex];
-                addSwap();
+                addSwap(1, values[j]);
                 renderBars([middle + 1 + rightIndex], [mainIndex], []);
                 await waitForNextAction();
                 rightIndex++;
@@ -529,11 +568,11 @@
                 renderBars([i, end], [pivotIndex], []);
                 await waitForNextAction();
 
-                addComparison();
+                addComparison(1, values[i]);
 
                 if (values[i] < pivotValue) {
                     [values[i], values[pivotIndex]] = [values[pivotIndex], values[i]];
-                    addSwap();
+                    addSwap(1, values[j]);
                     renderBars([], [i, pivotIndex], []);
                     await waitForNextAction();
                     pivotIndex++;
@@ -541,7 +580,7 @@
             }
 
             [values[pivotIndex], values[end]] = [values[end], values[pivotIndex]];
-            addSwap();
+            addSwap(1, values[j]);
             renderBars([], [pivotIndex, end], []);
             await waitForNextAction();
 
