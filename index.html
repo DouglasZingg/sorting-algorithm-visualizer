@@ -1,0 +1,374 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sorting Algorithm Visualizer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #111827;
+            color: #f9fafb;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px;
+        }
+
+        h1 {
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #9ca3af;
+            margin-bottom: 24px;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            align-items: center;
+            background: #1f2937;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            width: min(100%, 900px);
+        }
+
+        button,
+        select,
+        input {
+            border: none;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 14px;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            cursor: pointer;
+        }
+
+            button:hover:not(:disabled) {
+                background: #1d4ed8;
+            }
+
+            button:disabled,
+            select:disabled,
+            input:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+        select,
+        input {
+            background: #374151;
+            color: white;
+        }
+
+        label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #d1d5db;
+            font-size: 14px;
+        }
+
+        #bar-container {
+            width: min(100%, 1000px);
+            height: 420px;
+            background: #030712;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            overflow: hidden;
+        }
+
+        .bar {
+            flex: 1;
+            background: #60a5fa;
+            border-radius: 4px 4px 0 0;
+            transition: height 0.08s linear, background-color 0.08s linear;
+        }
+
+            .bar.compare {
+                background: #facc15;
+            }
+
+            .bar.swap {
+                background: #f97316;
+            }
+
+            .bar.sorted {
+                background: #22c55e;
+            }
+
+        .status {
+            margin-top: 16px;
+            color: #d1d5db;
+            min-height: 24px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sorting Algorithm Visualizer</h1>
+    <p class="subtitle">Watch common sorting algorithms compare, swap, and finish.</p>
+
+    <div class="controls">
+        <button id="randomizeBtn">Randomize</button>
+
+        <label>
+            Algorithm
+            <select id="algorithmSelect">
+                <option value="bubble">Bubble Sort</option>
+                <option value="selection">Selection Sort</option>
+                <option value="insertion">Insertion Sort</option>
+                <option value="quick">Quick Sort</option>
+            </select>
+        </label>
+
+        <label>
+            Bars
+            <input id="sizeSlider" type="range" min="10" max="100" value="40" />
+            <span id="sizeValue">40</span>
+        </label>
+
+        <label>
+            Speed
+            <input id="speedSlider" type="range" min="5" max="250" value="60" />
+            <span id="speedValue">60ms</span>
+        </label>
+
+        <button id="sortBtn">Start Sort</button>
+    </div>
+
+    <div id="bar-container"></div>
+    <div id="status" class="status">Ready.</div>
+
+    <script>
+    const barContainer = document.getElementById("bar-container");
+    const randomizeBtn = document.getElementById("randomizeBtn");
+    const sortBtn = document.getElementById("sortBtn");
+    const algorithmSelect = document.getElementById("algorithmSelect");
+    const sizeSlider = document.getElementById("sizeSlider");
+    const speedSlider = document.getElementById("speedSlider");
+    const sizeValue = document.getElementById("sizeValue");
+    const speedValue = document.getElementById("speedValue");
+    const statusText = document.getElementById("status");
+
+    let values = [];
+    let isSorting = false;
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function getDelay() {
+      return Number(speedSlider.value);
+    }
+
+    function generateArray() {
+      const size = Number(sizeSlider.value);
+      values = [];
+
+      for (let i = 0; i < size; i++) {
+        values.push(Math.floor(Math.random() * 390) + 20);
+      }
+
+      renderBars();
+      statusText.textContent = "Array randomized.";
+    }
+
+    function renderBars(activeIndices = [], swapIndices = [], sortedIndices = []) {
+      barContainer.innerHTML = "";
+
+      values.forEach((value, index) => {
+        const bar = document.createElement("div");
+        bar.classList.add("bar");
+        bar.style.height = `${value}px`;
+
+        if (activeIndices.includes(index)) {
+          bar.classList.add("compare");
+        }
+
+        if (swapIndices.includes(index)) {
+          bar.classList.add("swap");
+        }
+
+        if (sortedIndices.includes(index)) {
+          bar.classList.add("sorted");
+        }
+
+        barContainer.appendChild(bar);
+      });
+    }
+
+    async function markAllSorted() {
+      for (let i = 0; i < values.length; i++) {
+        renderBars([], [], Array.from({ length: i + 1 }, (_, index) => index));
+        await sleep(10);
+      }
+    }
+
+    function setControlsDisabled(disabled) {
+      isSorting = disabled;
+      randomizeBtn.disabled = disabled;
+      sortBtn.disabled = disabled;
+      algorithmSelect.disabled = disabled;
+      sizeSlider.disabled = disabled;
+    }
+
+    async function bubbleSort() {
+      for (let i = 0; i < values.length - 1; i++) {
+        for (let j = 0; j < values.length - i - 1; j++) {
+          renderBars([j, j + 1], [], getSortedTail(i));
+          await sleep(getDelay());
+
+          if (values[j] > values[j + 1]) {
+            [values[j], values[j + 1]] = [values[j + 1], values[j]];
+            renderBars([], [j, j + 1], getSortedTail(i));
+            await sleep(getDelay());
+          }
+        }
+      }
+    }
+
+    async function selectionSort() {
+      const sorted = [];
+
+      for (let i = 0; i < values.length - 1; i++) {
+        let minIndex = i;
+
+        for (let j = i + 1; j < values.length; j++) {
+          renderBars([minIndex, j], [], sorted);
+          await sleep(getDelay());
+
+          if (values[j] < values[minIndex]) {
+            minIndex = j;
+          }
+        }
+
+        if (minIndex !== i) {
+          [values[i], values[minIndex]] = [values[minIndex], values[i]];
+          renderBars([], [i, minIndex], sorted);
+          await sleep(getDelay());
+        }
+
+        sorted.push(i);
+      }
+    }
+
+    async function insertionSort() {
+      const sorted = [0];
+
+      for (let i = 1; i < values.length; i++) {
+        let current = values[i];
+        let j = i - 1;
+
+        renderBars([i, j], [], sorted);
+        await sleep(getDelay());
+
+        while (j >= 0 && values[j] > current) {
+          values[j + 1] = values[j];
+          renderBars([j, j + 1], [j + 1], sorted);
+          await sleep(getDelay());
+          j--;
+        }
+
+        values[j + 1] = current;
+        sorted.push(i);
+      }
+    }
+
+    async function quickSort(start = 0, end = values.length - 1) {
+      if (start >= end) {
+        return;
+      }
+
+      const pivotIndex = await partition(start, end);
+      await quickSort(start, pivotIndex - 1);
+      await quickSort(pivotIndex + 1, end);
+    }
+
+    async function partition(start, end) {
+      const pivotValue = values[end];
+      let pivotIndex = start;
+
+      for (let i = start; i < end; i++) {
+        renderBars([i, end], [pivotIndex], []);
+        await sleep(getDelay());
+
+        if (values[i] < pivotValue) {
+          [values[i], values[pivotIndex]] = [values[pivotIndex], values[i]];
+          renderBars([], [i, pivotIndex], []);
+          await sleep(getDelay());
+          pivotIndex++;
+        }
+      }
+
+      [values[pivotIndex], values[end]] = [values[end], values[pivotIndex]];
+      renderBars([], [pivotIndex, end], []);
+      await sleep(getDelay());
+
+      return pivotIndex;
+    }
+
+    function getSortedTail(sortedCount) {
+      const sorted = [];
+      for (let i = values.length - sortedCount; i < values.length; i++) {
+        sorted.push(i);
+      }
+      return sorted;
+    }
+
+    async function startSort() {
+      if (isSorting) return;
+
+      setControlsDisabled(true);
+      statusText.textContent = `Running ${algorithmSelect.options[algorithmSelect.selectedIndex].text}...`;
+
+      const algorithm = algorithmSelect.value;
+
+      if (algorithm === "bubble") {
+        await bubbleSort();
+      } else if (algorithm === "selection") {
+        await selectionSort();
+      } else if (algorithm === "insertion") {
+        await insertionSort();
+      } else if (algorithm === "quick") {
+        await quickSort();
+      }
+
+      await markAllSorted();
+      statusText.textContent = "Sorting complete.";
+      setControlsDisabled(false);
+    }
+
+    randomizeBtn.addEventListener("click", generateArray);
+    sortBtn.addEventListener("click", startSort);
+
+    sizeSlider.addEventListener("input", () => {
+      sizeValue.textContent = sizeSlider.value;
+      generateArray();
+    });
+
+    speedSlider.addEventListener("input", () => {
+      speedValue.textContent = `${speedSlider.value}ms`;
+    });
+
+    generateArray();
+    </script>
+</body>
+</html>
