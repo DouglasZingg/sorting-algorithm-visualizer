@@ -115,6 +115,22 @@
                 background: #22c55e;
             }
 
+        .description {
+            width: min(100%, 900px);
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            color: #d1d5db;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+            .description strong {
+                color: #f9fafb;
+            }
+
         .stats {
             width: min(100%, 900px);
             display: flex;
@@ -180,6 +196,8 @@
         </label>
     </div>
 
+    <div id="descriptionPanel" class="description"></div>
+
     <div id="stats" class="stats">
         <div><strong>Comparisons:</strong> <span id="comparisonCount">0</span></div>
         <div><strong>Swaps / Moves:</strong> <span id="swapCount">0</span></div>
@@ -206,6 +224,7 @@
         const comparisonCount = document.getElementById("comparisonCount");
         const swapCount = document.getElementById("swapCount");
         const elapsedTime = document.getElementById("elapsedTime");
+        const descriptionPanel = document.getElementById("descriptionPanel");
 
         let values = [];
         let isSorting = false;
@@ -426,7 +445,7 @@
 
                     if (values[j] > values[j + 1]) {
                         [values[j], values[j + 1]] = [values[j + 1], values[j]];
-                        addSwap(1, values[j]);
+                        addSwap(1, values[mainIndex]);
                         renderBars([], [j, j + 1], getSortedTail(i));
                         await waitForNextAction();
                     }
@@ -453,7 +472,7 @@
 
                 if (minIndex !== i) {
                     [values[i], values[minIndex]] = [values[minIndex], values[i]];
-                    addSwap(1, values[j]);
+                    addSwap(1, values[i]);
                     renderBars([], [i, minIndex], sorted);
                     await waitForNextAction();
                 }
@@ -480,14 +499,14 @@
                     }
 
                     values[j + 1] = values[j];
-                    addSwap(1, values[j]);
+                    addSwap(1, values[mainIndex]);
                     renderBars([j, j + 1], [j + 1], sorted);
                     await waitForNextAction();
                     j--;
                 }
 
                 values[j + 1] = current;
-                addSwap(1, values[j]);
+                addSwap(1, current);
                 sorted.push(i);
             }
         }
@@ -525,7 +544,7 @@
                     rightIndex++;
                 }
 
-                addSwap(1, values[j]);
+                addSwap(1, values[mainIndex]);
                 renderBars([], [mainIndex], []);
                 await waitForNextAction();
                 mainIndex++;
@@ -533,7 +552,7 @@
 
             while (leftIndex < left.length) {
                 values[mainIndex] = left[leftIndex];
-                addSwap(1, values[j]);
+                addSwap(1, values[mainIndex]);
                 renderBars([start + leftIndex], [mainIndex], []);
                 await waitForNextAction();
                 leftIndex++;
@@ -542,7 +561,7 @@
 
             while (rightIndex < right.length) {
                 values[mainIndex] = right[rightIndex];
-                addSwap(1, values[j]);
+                addSwap(1, values[mainIndex]);
                 renderBars([middle + 1 + rightIndex], [mainIndex], []);
                 await waitForNextAction();
                 rightIndex++;
@@ -572,7 +591,7 @@
 
                 if (values[i] < pivotValue) {
                     [values[i], values[pivotIndex]] = [values[pivotIndex], values[i]];
-                    addSwap(1, values[j]);
+                    addSwap(1, values[pivotIndex]);
                     renderBars([], [i, pivotIndex], []);
                     await waitForNextAction();
                     pivotIndex++;
@@ -580,7 +599,7 @@
             }
 
             [values[pivotIndex], values[end]] = [values[end], values[pivotIndex]];
-            addSwap(1, values[j]);
+            addSwap(1, values[pivotIndex]);
             renderBars([], [pivotIndex, end], []);
             await waitForNextAction();
 
@@ -625,6 +644,19 @@
             setControlsDisabled(false);
         }
 
+        const descriptions = {
+            bubble: "<strong>Bubble Sort:</strong> Repeatedly compares adjacent elements and swaps them if they are in the wrong order. Simple but inefficient (O(n²)).",
+            selection: "<strong>Selection Sort:</strong> Repeatedly selects the smallest element and moves it to the front. Also O(n²), but with fewer swaps.",
+            insertion: "<strong>Insertion Sort:</strong> Builds a sorted portion one element at a time by inserting elements into their correct position. Efficient for nearly sorted data.",
+            quick: "<strong>Quick Sort:</strong> Divides the array using a pivot, then recursively sorts partitions. Very fast on average (O(n log n)).",
+            merge: "<strong>Merge Sort:</strong> Divides the array into halves, sorts them, and merges them back together. Stable and consistently O(n log n)."
+        };
+
+        function updateDescription() {
+            const algo = algorithmSelect.value;
+            descriptionPanel.innerHTML = descriptions[algo] || "";
+        }
+
         randomizeBtn.addEventListener("click", generateArray);
         sortBtn.addEventListener("click", startSort);
         pauseBtn.addEventListener("click", pauseSort);
@@ -632,6 +664,8 @@
         stepBtn.addEventListener("click", stepSort);
 
         algorithmSelect.addEventListener("change", () => {
+            updateDescription();
+
             if (!isSorting) {
                 generateArray();
                 statusText.textContent = `${algorithmSelect.options[algorithmSelect.selectedIndex].text} selected. Array randomized.`;
@@ -647,6 +681,7 @@
             speedValue.textContent = `${speedSlider.value}ms`;
         });
 
+        updateDescription();
         generateArray();
     </script>
 </body>
