@@ -153,6 +153,7 @@
                 <option value="selection">Selection Sort</option>
                 <option value="insertion">Insertion Sort</option>
                 <option value="quick">Quick Sort</option>
+                <option value="merge">Merge Sort</option>
             </select>
         </label>
 
@@ -452,6 +453,64 @@
             }
         }
 
+        async function mergeSort(start = 0, end = values.length - 1) {
+            if (start >= end) {
+                return;
+            }
+
+            const middle = Math.floor((start + end) / 2);
+
+            await mergeSort(start, middle);
+            await mergeSort(middle + 1, end);
+            await merge(start, middle, end);
+        }
+
+        async function merge(start, middle, end) {
+            const left = values.slice(start, middle + 1);
+            const right = values.slice(middle + 1, end + 1);
+
+            let leftIndex = 0;
+            let rightIndex = 0;
+            let mainIndex = start;
+
+            while (leftIndex < left.length && rightIndex < right.length) {
+                addComparison();
+                renderBars([start + leftIndex, middle + 1 + rightIndex], [mainIndex], []);
+                await waitForNextAction();
+
+                if (left[leftIndex] <= right[rightIndex]) {
+                    values[mainIndex] = left[leftIndex];
+                    leftIndex++;
+                } else {
+                    values[mainIndex] = right[rightIndex];
+                    rightIndex++;
+                }
+
+                addSwap();
+                renderBars([], [mainIndex], []);
+                await waitForNextAction();
+                mainIndex++;
+            }
+
+            while (leftIndex < left.length) {
+                values[mainIndex] = left[leftIndex];
+                addSwap();
+                renderBars([start + leftIndex], [mainIndex], []);
+                await waitForNextAction();
+                leftIndex++;
+                mainIndex++;
+            }
+
+            while (rightIndex < right.length) {
+                values[mainIndex] = right[rightIndex];
+                addSwap();
+                renderBars([middle + 1 + rightIndex], [mainIndex], []);
+                await waitForNextAction();
+                rightIndex++;
+                mainIndex++;
+            }
+        }
+
         async function quickSort(start = 0, end = values.length - 1) {
             if (start >= end) {
                 return;
@@ -517,6 +576,8 @@
                 await insertionSort();
             } else if (algorithm === "quick") {
                 await quickSort();
+            } else if (algorithm === "merge") {
+                await mergeSort();
             }
 
             await markAllSorted();
