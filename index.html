@@ -115,6 +115,23 @@
                 background: #22c55e;
             }
 
+        .stats {
+            width: min(100%, 900px);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 16px;
+            background: #1f2937;
+            color: #d1d5db;
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+            .stats strong {
+                color: #f9fafb;
+            }
+
         .status {
             margin-top: 16px;
             color: #d1d5db;
@@ -157,6 +174,12 @@
         <button id="stepBtn" disabled>Step</button>
     </div>
 
+    <div id="stats" class="stats">
+        <div><strong>Comparisons:</strong> <span id="comparisonCount">0</span></div>
+        <div><strong>Swaps / Moves:</strong> <span id="swapCount">0</span></div>
+        <div><strong>Elapsed:</strong> <span id="elapsedTime">0.00s</span></div>
+    </div>
+
     <div id="bar-container"></div>
     <div id="status" class="status">Ready.</div>
 
@@ -173,11 +196,18 @@
         const sizeValue = document.getElementById("sizeValue");
         const speedValue = document.getElementById("speedValue");
         const statusText = document.getElementById("status");
+        const comparisonCount = document.getElementById("comparisonCount");
+        const swapCount = document.getElementById("swapCount");
+        const elapsedTime = document.getElementById("elapsedTime");
 
         let values = [];
         let isSorting = false;
         let isPaused = false;
         let stepRequested = false;
+        let comparisons = 0;
+        let swaps = 0;
+        let sortStartTime = 0;
+        let timerInterval = null;
 
         function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
@@ -213,6 +243,48 @@
             }
         }
 
+        function resetStats() {
+            comparisons = 0;
+            swaps = 0;
+            sortStartTime = 0;
+            clearInterval(timerInterval);
+            timerInterval = null;
+            comparisonCount.textContent = comparisons;
+            swapCount.textContent = swaps;
+            elapsedTime.textContent = "0.00s";
+        }
+
+        function updateStats() {
+            comparisonCount.textContent = comparisons;
+            swapCount.textContent = swaps;
+
+            if (sortStartTime > 0) {
+                const seconds = (performance.now() - sortStartTime) / 1000;
+                elapsedTime.textContent = `${seconds.toFixed(2)}s`;
+            }
+        }
+
+        function addComparison(amount = 1) {
+            comparisons += amount;
+            updateStats();
+        }
+
+        function addSwap(amount = 1) {
+            swaps += amount;
+            updateStats();
+        }
+
+        function startTimer() {
+            sortStartTime = performance.now();
+            timerInterval = setInterval(updateStats, 100);
+        }
+
+        function stopTimer() {
+            updateStats();
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+
         function generateArray() {
             const size = Number(sizeSlider.value);
             values = [];
@@ -222,6 +294,7 @@
             }
 
             renderBars();
+            resetStats();
             statusText.textContent = "Array randomized.";
         }
 
@@ -309,8 +382,11 @@
                     renderBars([j, j + 1], [], getSortedTail(i));
                     await waitForNextAction();
 
+                    addComparison();
+
                     if (values[j] > values[j + 1]) {
                         [values[j], values[j + 1]] = [values[j + 1], values[j]];
+                        addSwap();
                         renderBars([], [j, j + 1], getSortedTail(i));
                         await waitForNextAction();
                     }
@@ -328,6 +404,8 @@
                     renderBars([minIndex, j], [], sorted);
                     await waitForNextAction();
 
+                    addComparison();
+
                     if (values[j] < values[minIndex]) {
                         minIndex = j;
                     }
@@ -335,6 +413,7 @@
 
                 if (minIndex !== i) {
                     [values[i], values[minIndex]] = [values[minIndex], values[i]];
+                    addSwap();
                     renderBars([], [i, minIndex], sorted);
                     await waitForNextAction();
                 }
@@ -353,14 +432,22 @@
                 renderBars([i, j], [], sorted);
                 await waitForNextAction();
 
-                while (j >= 0 && values[j] > current) {
+                while (j >= 0) {
+                    addComparison();
+
+                    if (values[j] <= current) {
+                        break;
+                    }
+
                     values[j + 1] = values[j];
+                    addSwap();
                     renderBars([j, j + 1], [j + 1], sorted);
                     await waitForNextAction();
                     j--;
                 }
 
                 values[j + 1] = current;
+                addSwap();
                 sorted.push(i);
             }
         }
@@ -383,8 +470,11 @@
                 renderBars([i, end], [pivotIndex], []);
                 await waitForNextAction();
 
+                addComparison();
+
                 if (values[i] < pivotValue) {
                     [values[i], values[pivotIndex]] = [values[pivotIndex], values[i]];
+                    addSwap();
                     renderBars([], [i, pivotIndex], []);
                     await waitForNextAction();
                     pivotIndex++;
@@ -392,6 +482,7 @@
             }
 
             [values[pivotIndex], values[end]] = [values[end], values[pivotIndex]];
+            addSwap();
             renderBars([], [pivotIndex, end], []);
             await waitForNextAction();
 
@@ -411,6 +502,8 @@
 
             isPaused = false;
             stepRequested = false;
+            resetStats();
+            startTimer();
             setControlsDisabled(true);
             statusText.textContent = `Running ${algorithmSelect.options[algorithmSelect.selectedIndex].text}...`;
 
@@ -427,6 +520,7 @@
             }
 
             await markAllSorted();
+            stopTimer();
             statusText.textContent = "Sorting complete.";
             setControlsDisabled(false);
         }
