@@ -152,223 +152,308 @@
         </label>
 
         <button id="sortBtn">Start Sort</button>
+        <button id="pauseBtn" disabled>Pause</button>
+        <button id="resumeBtn" disabled>Resume</button>
+        <button id="stepBtn" disabled>Step</button>
     </div>
 
     <div id="bar-container"></div>
     <div id="status" class="status">Ready.</div>
 
     <script>
-    const barContainer = document.getElementById("bar-container");
-    const randomizeBtn = document.getElementById("randomizeBtn");
-    const sortBtn = document.getElementById("sortBtn");
-    const algorithmSelect = document.getElementById("algorithmSelect");
-    const sizeSlider = document.getElementById("sizeSlider");
-    const speedSlider = document.getElementById("speedSlider");
-    const sizeValue = document.getElementById("sizeValue");
-    const speedValue = document.getElementById("speedValue");
-    const statusText = document.getElementById("status");
+        const barContainer = document.getElementById("bar-container");
+        const randomizeBtn = document.getElementById("randomizeBtn");
+        const sortBtn = document.getElementById("sortBtn");
+        const pauseBtn = document.getElementById("pauseBtn");
+        const resumeBtn = document.getElementById("resumeBtn");
+        const stepBtn = document.getElementById("stepBtn");
+        const algorithmSelect = document.getElementById("algorithmSelect");
+        const sizeSlider = document.getElementById("sizeSlider");
+        const speedSlider = document.getElementById("speedSlider");
+        const sizeValue = document.getElementById("sizeValue");
+        const speedValue = document.getElementById("speedValue");
+        const statusText = document.getElementById("status");
 
-    let values = [];
-    let isSorting = false;
+        let values = [];
+        let isSorting = false;
+        let isPaused = false;
+        let stepRequested = false;
 
-    function sleep(ms) {
-      return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    function getDelay() {
-      return Number(speedSlider.value);
-    }
-
-    function generateArray() {
-      const size = Number(sizeSlider.value);
-      values = [];
-
-      for (let i = 0; i < size; i++) {
-        values.push(Math.floor(Math.random() * 390) + 20);
-      }
-
-      renderBars();
-      statusText.textContent = "Array randomized.";
-    }
-
-    function renderBars(activeIndices = [], swapIndices = [], sortedIndices = []) {
-      barContainer.innerHTML = "";
-
-      values.forEach((value, index) => {
-        const bar = document.createElement("div");
-        bar.classList.add("bar");
-        bar.style.height = `${value}px`;
-
-        if (activeIndices.includes(index)) {
-          bar.classList.add("compare");
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
         }
 
-        if (swapIndices.includes(index)) {
-          bar.classList.add("swap");
+        function getDelay() {
+            return Number(speedSlider.value);
         }
 
-        if (sortedIndices.includes(index)) {
-          bar.classList.add("sorted");
+        async function waitForNextAction() {
+            // If paused, wait here until Resume or Step is clicked.
+            while (isPaused && !stepRequested) {
+                await sleep(25);
+            }
+
+            // Step advances exactly one visual action, then pauses again.
+            if (stepRequested) {
+                stepRequested = false;
+                isPaused = true;
+                return;
+            }
+
+            // Responsive delay: lets Pause react quickly even during slower speeds.
+            let remainingDelay = getDelay();
+            while (remainingDelay > 0) {
+                if (isPaused) {
+                    return await waitForNextAction();
+                }
+
+                const chunk = Math.min(25, remainingDelay);
+                await sleep(chunk);
+                remainingDelay -= chunk;
+            }
         }
 
-        barContainer.appendChild(bar);
-      });
-    }
+        function generateArray() {
+            const size = Number(sizeSlider.value);
+            values = [];
 
-    async function markAllSorted() {
-      for (let i = 0; i < values.length; i++) {
-        renderBars([], [], Array.from({ length: i + 1 }, (_, index) => index));
-        await sleep(10);
-      }
-    }
+            for (let i = 0; i < size; i++) {
+                values.push(Math.floor(Math.random() * 390) + 20);
+            }
 
-    function setControlsDisabled(disabled) {
-      isSorting = disabled;
-      randomizeBtn.disabled = disabled;
-      sortBtn.disabled = disabled;
-      algorithmSelect.disabled = disabled;
-      sizeSlider.disabled = disabled;
-    }
-
-    async function bubbleSort() {
-      for (let i = 0; i < values.length - 1; i++) {
-        for (let j = 0; j < values.length - i - 1; j++) {
-          renderBars([j, j + 1], [], getSortedTail(i));
-          await sleep(getDelay());
-
-          if (values[j] > values[j + 1]) {
-            [values[j], values[j + 1]] = [values[j + 1], values[j]];
-            renderBars([], [j, j + 1], getSortedTail(i));
-            await sleep(getDelay());
-          }
-        }
-      }
-    }
-
-    async function selectionSort() {
-      const sorted = [];
-
-      for (let i = 0; i < values.length - 1; i++) {
-        let minIndex = i;
-
-        for (let j = i + 1; j < values.length; j++) {
-          renderBars([minIndex, j], [], sorted);
-          await sleep(getDelay());
-
-          if (values[j] < values[minIndex]) {
-            minIndex = j;
-          }
+            renderBars();
+            statusText.textContent = "Array randomized.";
         }
 
-        if (minIndex !== i) {
-          [values[i], values[minIndex]] = [values[minIndex], values[i]];
-          renderBars([], [i, minIndex], sorted);
-          await sleep(getDelay());
+        function renderBars(activeIndices = [], swapIndices = [], sortedIndices = []) {
+            barContainer.innerHTML = "";
+
+            values.forEach((value, index) => {
+                const bar = document.createElement("div");
+                bar.classList.add("bar");
+                bar.style.height = `${value}px`;
+
+                if (activeIndices.includes(index)) {
+                    bar.classList.add("compare");
+                }
+
+                if (swapIndices.includes(index)) {
+                    bar.classList.add("swap");
+                }
+
+                if (sortedIndices.includes(index)) {
+                    bar.classList.add("sorted");
+                }
+
+                barContainer.appendChild(bar);
+            });
         }
 
-        sorted.push(i);
-      }
-    }
-
-    async function insertionSort() {
-      const sorted = [0];
-
-      for (let i = 1; i < values.length; i++) {
-        let current = values[i];
-        let j = i - 1;
-
-        renderBars([i, j], [], sorted);
-        await sleep(getDelay());
-
-        while (j >= 0 && values[j] > current) {
-          values[j + 1] = values[j];
-          renderBars([j, j + 1], [j + 1], sorted);
-          await sleep(getDelay());
-          j--;
+        async function markAllSorted() {
+            for (let i = 0; i < values.length; i++) {
+                renderBars([], [], Array.from({ length: i + 1 }, (_, index) => index));
+                await sleep(10);
+            }
         }
 
-        values[j + 1] = current;
-        sorted.push(i);
-      }
-    }
+        function setControlsDisabled(disabled) {
+            isSorting = disabled;
+            randomizeBtn.disabled = disabled;
+            sortBtn.disabled = disabled;
+            algorithmSelect.disabled = disabled;
+            sizeSlider.disabled = disabled;
 
-    async function quickSort(start = 0, end = values.length - 1) {
-      if (start >= end) {
-        return;
-      }
+            pauseBtn.disabled = !disabled;
+            resumeBtn.disabled = true;
+            stepBtn.disabled = !disabled;
 
-      const pivotIndex = await partition(start, end);
-      await quickSort(start, pivotIndex - 1);
-      await quickSort(pivotIndex + 1, end);
-    }
-
-    async function partition(start, end) {
-      const pivotValue = values[end];
-      let pivotIndex = start;
-
-      for (let i = start; i < end; i++) {
-        renderBars([i, end], [pivotIndex], []);
-        await sleep(getDelay());
-
-        if (values[i] < pivotValue) {
-          [values[i], values[pivotIndex]] = [values[pivotIndex], values[i]];
-          renderBars([], [i, pivotIndex], []);
-          await sleep(getDelay());
-          pivotIndex++;
+            if (!disabled) {
+                isPaused = false;
+                stepRequested = false;
+            }
         }
-      }
 
-      [values[pivotIndex], values[end]] = [values[end], values[pivotIndex]];
-      renderBars([], [pivotIndex, end], []);
-      await sleep(getDelay());
+        function pauseSort() {
+            if (!isSorting) return;
+            isPaused = true;
+            stepRequested = false;
+            pauseBtn.disabled = true;
+            resumeBtn.disabled = false;
+            stepBtn.disabled = false;
+            statusText.textContent = "Sorting paused. Use Resume or Step.";
+        }
 
-      return pivotIndex;
-    }
+        function resumeSort() {
+            if (!isSorting) return;
+            isPaused = false;
+            stepRequested = false;
+            pauseBtn.disabled = false;
+            resumeBtn.disabled = true;
+            stepBtn.disabled = false;
+            statusText.textContent = `Running ${algorithmSelect.options[algorithmSelect.selectedIndex].text}...`;
+        }
 
-    function getSortedTail(sortedCount) {
-      const sorted = [];
-      for (let i = values.length - sortedCount; i < values.length; i++) {
-        sorted.push(i);
-      }
-      return sorted;
-    }
+        function stepSort() {
+            if (!isSorting) return;
+            stepRequested = true;
+            isPaused = true;
+            pauseBtn.disabled = true;
+            resumeBtn.disabled = false;
+            stepBtn.disabled = false;
+            statusText.textContent = "Stepping through sort.";
+        }
 
-    async function startSort() {
-      if (isSorting) return;
+        async function bubbleSort() {
+            for (let i = 0; i < values.length - 1; i++) {
+                for (let j = 0; j < values.length - i - 1; j++) {
+                    renderBars([j, j + 1], [], getSortedTail(i));
+                    await waitForNextAction();
 
-      setControlsDisabled(true);
-      statusText.textContent = `Running ${algorithmSelect.options[algorithmSelect.selectedIndex].text}...`;
+                    if (values[j] > values[j + 1]) {
+                        [values[j], values[j + 1]] = [values[j + 1], values[j]];
+                        renderBars([], [j, j + 1], getSortedTail(i));
+                        await waitForNextAction();
+                    }
+                }
+            }
+        }
 
-      const algorithm = algorithmSelect.value;
+        async function selectionSort() {
+            const sorted = [];
 
-      if (algorithm === "bubble") {
-        await bubbleSort();
-      } else if (algorithm === "selection") {
-        await selectionSort();
-      } else if (algorithm === "insertion") {
-        await insertionSort();
-      } else if (algorithm === "quick") {
-        await quickSort();
-      }
+            for (let i = 0; i < values.length - 1; i++) {
+                let minIndex = i;
 
-      await markAllSorted();
-      statusText.textContent = "Sorting complete.";
-      setControlsDisabled(false);
-    }
+                for (let j = i + 1; j < values.length; j++) {
+                    renderBars([minIndex, j], [], sorted);
+                    await waitForNextAction();
 
-    randomizeBtn.addEventListener("click", generateArray);
-    sortBtn.addEventListener("click", startSort);
+                    if (values[j] < values[minIndex]) {
+                        minIndex = j;
+                    }
+                }
 
-    sizeSlider.addEventListener("input", () => {
-      sizeValue.textContent = sizeSlider.value;
-      generateArray();
-    });
+                if (minIndex !== i) {
+                    [values[i], values[minIndex]] = [values[minIndex], values[i]];
+                    renderBars([], [i, minIndex], sorted);
+                    await waitForNextAction();
+                }
 
-    speedSlider.addEventListener("input", () => {
-      speedValue.textContent = `${speedSlider.value}ms`;
-    });
+                sorted.push(i);
+            }
+        }
 
-    generateArray();
+        async function insertionSort() {
+            const sorted = [0];
+
+            for (let i = 1; i < values.length; i++) {
+                let current = values[i];
+                let j = i - 1;
+
+                renderBars([i, j], [], sorted);
+                await waitForNextAction();
+
+                while (j >= 0 && values[j] > current) {
+                    values[j + 1] = values[j];
+                    renderBars([j, j + 1], [j + 1], sorted);
+                    await waitForNextAction();
+                    j--;
+                }
+
+                values[j + 1] = current;
+                sorted.push(i);
+            }
+        }
+
+        async function quickSort(start = 0, end = values.length - 1) {
+            if (start >= end) {
+                return;
+            }
+
+            const pivotIndex = await partition(start, end);
+            await quickSort(start, pivotIndex - 1);
+            await quickSort(pivotIndex + 1, end);
+        }
+
+        async function partition(start, end) {
+            const pivotValue = values[end];
+            let pivotIndex = start;
+
+            for (let i = start; i < end; i++) {
+                renderBars([i, end], [pivotIndex], []);
+                await waitForNextAction();
+
+                if (values[i] < pivotValue) {
+                    [values[i], values[pivotIndex]] = [values[pivotIndex], values[i]];
+                    renderBars([], [i, pivotIndex], []);
+                    await waitForNextAction();
+                    pivotIndex++;
+                }
+            }
+
+            [values[pivotIndex], values[end]] = [values[end], values[pivotIndex]];
+            renderBars([], [pivotIndex, end], []);
+            await waitForNextAction();
+
+            return pivotIndex;
+        }
+
+        function getSortedTail(sortedCount) {
+            const sorted = [];
+            for (let i = values.length - sortedCount; i < values.length; i++) {
+                sorted.push(i);
+            }
+            return sorted;
+        }
+
+        async function startSort() {
+            if (isSorting) return;
+
+            isPaused = false;
+            stepRequested = false;
+            setControlsDisabled(true);
+            statusText.textContent = `Running ${algorithmSelect.options[algorithmSelect.selectedIndex].text}...`;
+
+            const algorithm = algorithmSelect.value;
+
+            if (algorithm === "bubble") {
+                await bubbleSort();
+            } else if (algorithm === "selection") {
+                await selectionSort();
+            } else if (algorithm === "insertion") {
+                await insertionSort();
+            } else if (algorithm === "quick") {
+                await quickSort();
+            }
+
+            await markAllSorted();
+            statusText.textContent = "Sorting complete.";
+            setControlsDisabled(false);
+        }
+
+        randomizeBtn.addEventListener("click", generateArray);
+        sortBtn.addEventListener("click", startSort);
+        pauseBtn.addEventListener("click", pauseSort);
+        resumeBtn.addEventListener("click", resumeSort);
+        stepBtn.addEventListener("click", stepSort);
+
+        algorithmSelect.addEventListener("change", () => {
+            if (!isSorting) {
+                generateArray();
+                statusText.textContent = `${algorithmSelect.options[algorithmSelect.selectedIndex].text} selected. Array randomized.`;
+            }
+        });
+
+        sizeSlider.addEventListener("input", () => {
+            sizeValue.textContent = sizeSlider.value;
+            generateArray();
+        });
+
+        speedSlider.addEventListener("input", () => {
+            speedValue.textContent = `${speedSlider.value}ms`;
+        });
+
+        generateArray();
     </script>
 </body>
 </html>
