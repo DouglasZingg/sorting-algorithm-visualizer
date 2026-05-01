@@ -76,6 +76,7 @@
             border-radius: 8px;
             padding: 10px 12px;
             font-size: 14px;
+            max-width: 100%;
         }
 
         button {
@@ -107,6 +108,11 @@
             gap: 8px;
             color: #d1d5db;
             font-size: 14px;
+            min-width: 0;
+        }
+
+        input[type="range"] {
+            width: 130px;
         }
 
         input[type="checkbox"] {
@@ -171,17 +177,96 @@
             text-align: center;
         }
 
+        @media (max-width: 800px) {
+            .controls {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                align-items: center;
+            }
+
+                .controls button,
+                .controls label {
+                    width: 100%;
+                }
+
+                .controls label {
+                    justify-content: space-between;
+                }
+
+                .controls select,
+                .controls input[type="range"] {
+                    flex: 1;
+                }
+
+            .stats {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                text-align: center;
+            }
+        }
+
         @media (max-width: 650px) {
             body {
                 padding: 16px;
             }
 
-            #bar-container {
-                height: 320px;
+            h1 {
+                font-size: 1.6rem;
+            }
+
+            .subtitle {
+                font-size: 0.95rem;
             }
 
             .controls {
-                align-items: stretch;
+                grid-template-columns: 1fr;
+            }
+
+                .controls label {
+                    flex-wrap: wrap;
+                }
+
+                .controls select,
+                .controls input[type="range"] {
+                    width: 100%;
+                }
+
+            .stats {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .description {
+                font-size: 13px;
+            }
+
+            #bar-container {
+                height: 320px;
+                gap: 2px;
+                padding: 8px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            body {
+                padding: 12px;
+            }
+
+            .controls,
+            .stats,
+            .description {
+                padding: 12px;
+            }
+
+            #bar-container {
+                height: 260px;
+                gap: 1px;
+            }
+
+            button,
+            select,
+            input {
+                font-size: 13px;
             }
         }
     </style>
