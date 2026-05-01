@@ -170,6 +170,8 @@
                 <option value="insertion">Insertion Sort</option>
                 <option value="quick">Quick Sort</option>
                 <option value="merge">Merge Sort</option>
+                <option value="heap">Heap Sort</option>
+                <option value="shell">Shell Sort</option>
             </select>
         </label>
 
@@ -511,6 +513,93 @@
             }
         }
 
+        async function shellSort() {
+            let gap = Math.floor(values.length / 2);
+
+            while (gap > 0) {
+                for (let i = gap; i < values.length; i++) {
+                    const temp = values[i];
+                    let j = i;
+
+                    renderBars([i, j - gap], [], []);
+                    await waitForNextAction();
+
+                    while (j >= gap) {
+                        addComparison(1, values[j - gap]);
+
+                        if (values[j - gap] <= temp) {
+                            break;
+                        }
+
+                        values[j] = values[j - gap];
+                        addSwap(1, values[j]);
+                        renderBars([j, j - gap], [j], []);
+                        await waitForNextAction();
+                        j -= gap;
+                    }
+
+                    values[j] = temp;
+                    addSwap(1, temp);
+                    renderBars([], [j], []);
+                    await waitForNextAction();
+                }
+
+                gap = Math.floor(gap / 2);
+            }
+        }
+
+        async function heapSort() {
+            const length = values.length;
+
+            for (let i = Math.floor(length / 2) - 1; i >= 0; i--) {
+                await heapify(length, i);
+            }
+
+            for (let end = length - 1; end > 0; end--) {
+                [values[0], values[end]] = [values[end], values[0]];
+                addSwap(1, values[end]);
+                renderBars([], [0, end], getSortedTail(length - 1 - end));
+                await waitForNextAction();
+
+                await heapify(end, 0);
+            }
+        }
+
+        async function heapify(heapSize, rootIndex) {
+            let largest = rootIndex;
+            const left = 2 * rootIndex + 1;
+            const right = 2 * rootIndex + 2;
+
+            if (left < heapSize) {
+                addComparison(1, values[left]);
+                renderBars([largest, left], [], getSortedTail(values.length - heapSize));
+                await waitForNextAction();
+
+                if (values[left] > values[largest]) {
+                    largest = left;
+                }
+            }
+
+            if (right < heapSize) {
+                addComparison(1, values[right]);
+                renderBars([largest, right], [], getSortedTail(values.length - heapSize));
+                await waitForNextAction();
+
+                if (values[right] > values[largest]) {
+                    largest = right;
+                }
+            }
+
+            if (largest !== rootIndex) {
+                [values[rootIndex], values[largest]] = [values[largest], values[rootIndex]];
+                addSwap(1, values[rootIndex]);
+                renderBars([], [rootIndex, largest], getSortedTail(values.length - heapSize));
+                await waitForNextAction();
+
+                await heapify(heapSize, largest);
+            }
+        }
+
         async function mergeSort(start = 0, end = values.length - 1) {
             if (start >= end) {
                 return;
@@ -636,6 +725,10 @@
                 await quickSort();
             } else if (algorithm === "merge") {
                 await mergeSort();
+            } else if (algorithm === "heap") {
+                await heapSort();
+            } else if (algorithm === "shell") {
+                await shellSort();
             }
 
             await markAllSorted();
@@ -649,7 +742,9 @@
             selection: "<strong>Selection Sort:</strong> Repeatedly selects the smallest element and moves it to the front. Also O(n²), but with fewer swaps.",
             insertion: "<strong>Insertion Sort:</strong> Builds a sorted portion one element at a time by inserting elements into their correct position. Efficient for nearly sorted data.",
             quick: "<strong>Quick Sort:</strong> Divides the array using a pivot, then recursively sorts partitions. Very fast on average (O(n log n)).",
-            merge: "<strong>Merge Sort:</strong> Divides the array into halves, sorts them, and merges them back together. Stable and consistently O(n log n)."
+            merge: "<strong>Merge Sort:</strong> Divides the array into halves, sorts them, and merges them back together. Stable and consistently O(n log n).",
+            heap: "<strong>Heap Sort:</strong> Builds a max heap, then repeatedly moves the largest value to the end. Consistently O(n log n) and sorts in place.",
+            shell: "<strong>Shell Sort:</strong> Improves insertion sort by comparing elements far apart first, then reducing the gap until the array is sorted."
         };
 
         function updateDescription() {
