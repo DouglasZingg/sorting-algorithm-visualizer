@@ -298,6 +298,26 @@
         </label>
 
         <label>
+            Min
+            <input id="minValueInput" type="number" min="10" max="390" value="20" />
+        </label>
+
+        <label>
+            Max
+            <input id="maxValueInput" type="number" min="20" max="410" value="410" />
+        </label>
+
+        <label>
+            Array Type
+            <select id="arrayTypeSelect">
+                <option value="random">Random</option>
+                <option value="nearlySorted">Nearly Sorted</option>
+                <option value="reverse">Reverse Sorted</option>
+                <option value="fewUnique">Few Unique Values</option>
+            </select>
+        </label>
+
+        <label>
             Speed
             <input id="speedSlider" type="range" min="5" max="250" value="60" />
             <span id="speedValue">60ms</span>
@@ -334,6 +354,9 @@
         const stepBtn = document.getElementById("stepBtn");
         const algorithmSelect = document.getElementById("algorithmSelect");
         const sizeSlider = document.getElementById("sizeSlider");
+        const minValueInput = document.getElementById("minValueInput");
+        const maxValueInput = document.getElementById("maxValueInput");
+        const arrayTypeSelect = document.getElementById("arrayTypeSelect");
         const speedSlider = document.getElementById("speedSlider");
         const soundToggle = document.getElementById("soundToggle");
         const sizeValue = document.getElementById("sizeValue");
@@ -522,17 +545,73 @@
             });
         }
 
+        function clampValueSettings() {
+            let minValue = Number(minValueInput.value);
+            let maxValue = Number(maxValueInput.value);
+
+            minValue = Math.max(10, Math.min(390, minValue));
+            maxValue = Math.max(20, Math.min(410, maxValue));
+
+            if (minValue >= maxValue) {
+                maxValue = minValue + 10;
+            }
+
+            minValueInput.value = minValue;
+            maxValueInput.value = maxValue;
+
+            return { minValue, maxValue };
+        }
+
+        function getRandomValue(minValue, maxValue) {
+            return Math.floor(Math.random() * (maxValue - minValue + 1)) + minValue;
+        }
+
+        function shuffleSomeValues(array, swapsToMake) {
+            for (let i = 0; i < swapsToMake; i++) {
+                const firstIndex = Math.floor(Math.random() * array.length);
+                const secondIndex = Math.floor(Math.random() * array.length);
+                [array[firstIndex], array[secondIndex]] = [array[secondIndex], array[firstIndex]];
+            }
+        }
+
         function generateArray() {
             const size = Number(sizeSlider.value);
+            const { minValue, maxValue } = clampValueSettings();
+            const arrayType = arrayTypeSelect.value;
             values = [];
 
-            for (let i = 0; i < size; i++) {
-                values.push(Math.floor(Math.random() * 390) + 20);
+            if (arrayType === "random") {
+                for (let i = 0; i < size; i++) {
+                    values.push(getRandomValue(minValue, maxValue));
+                }
+            } else if (arrayType === "nearlySorted") {
+                for (let i = 0; i < size; i++) {
+                    const value = minValue + Math.round(((maxValue - minValue) / Math.max(1, size - 1)) * i);
+                    values.push(value);
+                }
+                shuffleSomeValues(values, Math.max(1, Math.floor(size * 0.1)));
+            } else if (arrayType === "reverse") {
+                for (let i = 0; i < size; i++) {
+                    const value = maxValue - Math.round(((maxValue - minValue) / Math.max(1, size - 1)) * i);
+                    values.push(value);
+                }
+            } else if (arrayType === "fewUnique") {
+                const uniqueValues = [
+                    minValue,
+                    Math.round(minValue + (maxValue - minValue) * 0.25),
+                    Math.round(minValue + (maxValue - minValue) * 0.5),
+                    Math.round(minValue + (maxValue - minValue) * 0.75),
+                    maxValue
+                ];
+
+                for (let i = 0; i < size; i++) {
+                    values.push(uniqueValues[Math.floor(Math.random() * uniqueValues.length)]);
+                }
             }
 
             resetStats();
             renderBars();
-            statusText.textContent = "Array randomized.";
+            statusText.textContent = "Array generated.";
         }
 
         async function markAllSorted() {
@@ -549,6 +628,9 @@
             sortBtn.disabled = sorting;
             algorithmSelect.disabled = sorting;
             sizeSlider.disabled = sorting;
+            minValueInput.disabled = sorting;
+            maxValueInput.disabled = sorting;
+            arrayTypeSelect.disabled = sorting;
 
             pauseBtn.disabled = !sorting;
             resumeBtn.disabled = true;
@@ -933,6 +1015,10 @@
             sizeValue.textContent = sizeSlider.value;
             generateArray();
         });
+
+        minValueInput.addEventListener("change", generateArray);
+        maxValueInput.addEventListener("change", generateArray);
+        arrayTypeSelect.addEventListener("change", generateArray);
 
         speedSlider.addEventListener("input", () => {
             speedValue.textContent = `${speedSlider.value}ms`;
