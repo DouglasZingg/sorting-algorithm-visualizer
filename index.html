@@ -501,8 +501,6 @@
             <input id="compareSpeedSlider" type="range" min="5" max="250" value="60" />
             <span id="compareSpeedValue">60ms</span>
         </label>
-
-        <button id="compareBtn">Start Comparison</button>
     </div>
 
     <div class="visualizer-layout">
@@ -662,7 +660,7 @@
         const compareSpeedSlider = document.getElementById("compareSpeedSlider");
         const compareSizeValue = document.getElementById("compareSizeValue");
         const compareSpeedValue = document.getElementById("compareSpeedValue");
-        const compareBtn = document.getElementById("compareBtn");
+        const compareBtn = sortBtn;
         const toggleCompareBtn = document.getElementById("toggleCompareBtn");
         const comparisonSection = document.getElementById("comparisonSection");
         const singleView = document.getElementById("singleView");
@@ -682,6 +680,8 @@
         let lastTimerTick = 0;
         let audioContext = null;
         let isComparisonView = false;
+        let activeRunToken = 0;
+        let currentRunToken = 0;
 
         function fillAlgorithmSelect(select, defaultValue) {
             select.innerHTML = "";
@@ -696,6 +696,21 @@
 
         function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
         function getDelay() { return Number(speedSlider.value); }
+
+        function cancelActiveRun() {
+            activeRunToken++;
+            currentRunToken = activeRunToken;
+            isPaused = false;
+            stepRequested = false;
+            stopTimer();
+            setSortingState(false);
+        }
+
+        function ensureRunIsActive() {
+            if (currentRunToken !== activeRunToken) {
+                throw new Error("RUN_CANCELLED");
+            }
+        }
 
         function updateDescription() {
             const algo = algorithmSelect.value;
@@ -774,15 +789,23 @@
         }
 
         async function waitForNextAction() {
-            while (isPaused && !stepRequested) await sleep(25);
+            ensureRunIsActive();
+
+            while (isPaused && !stepRequested) {
+                await sleep(25);
+                ensureRunIsActive();
+            }
+
             if (stepRequested) {
                 stepRequested = false;
                 isPaused = true;
+                ensureRunIsActive();
                 return;
             }
 
             let remainingDelay = getDelay();
             while (remainingDelay > 0) {
+                ensureRunIsActive();
                 if (isPaused) return waitForNextAction();
                 const chunk = Math.min(25, remainingDelay);
                 await sleep(chunk);
@@ -804,11 +827,12 @@
 
         function renderBarsTo(container, array, states = {}) {
             const { compare = [], swap = [], sorted = [], pivot = [], current = [], range = [] } = states;
+            const maxValue = Math.max(...array, Number(maxValueInput.value), 1);
             container.innerHTML = "";
             array.forEach((value, index) => {
                 const bar = document.createElement("div");
                 bar.classList.add("bar");
-                bar.style.height = `${value}px`;
+                bar.style.height = `${Math.max(2, (value / maxValue) * 100)}%`;
                 if (range.includes(index)) bar.classList.add("range");
                 if (sorted.includes(index)) bar.classList.add("sorted");
                 if (compare.includes(index)) bar.classList.add("compare");
@@ -895,6 +919,7 @@
             maxValueInput.disabled = sorting;
             arrayTypeSelect.disabled = sorting;
             compareBtn.disabled = sorting;
+            toggleCompareBtn.disabled = sorting;
             copyShareBtn.disabled = sorting;
             downloadArrayBtn.disabled = sorting;
             pauseBtn.disabled = !sorting;
@@ -1135,20 +1160,31 @@
             resetStats();
             isPaused = false;
             stepRequested = false;
+            currentRunToken = ++activeRunToken;
             setSortingState(true);
             startTimer();
             statusText.textContent = `Running ${algorithms[algorithmSelect.value]}...`;
-            if (algorithmSelect.value === "bubble") await bubbleSort();
-            else if (algorithmSelect.value === "selection") await selectionSort();
-            else if (algorithmSelect.value === "insertion") await insertionSort();
-            else if (algorithmSelect.value === "quick") await quickSort();
-            else if (algorithmSelect.value === "merge") await mergeSort();
-            else if (algorithmSelect.value === "heap") await heapSort();
-            else if (algorithmSelect.value === "shell") await shellSort();
-            await markAllSorted();
-            stopTimer();
-            setSortingState(false);
-            statusText.textContent = "Sorting complete.";
+
+            try {
+                if (algorithmSelect.value === "bubble") await bubbleSort();
+                else if (algorithmSelect.value === "selection") await selectionSort();
+                else if (algorithmSelect.value === "insertion") await insertionSort();
+                else if (algorithmSelect.value === "quick") await quickSort();
+                else if (algorithmSelect.value === "merge") await mergeSort();
+                else if (algorithmSelect.value === "heap") await heapSort();
+                else if (algorithmSelect.value === "shell") await shellSort();
+
+                ensureRunIsActive();
+                await markAllSorted();
+                stopTimer();
+                setSortingState(false);
+                statusText.textContent = "Sorting complete.";
+            } catch (error) {
+                if (error.message !== "RUN_CANCELLED") throw error;
+                stopTimer();
+                setSortingState(false);
+                statusText.textContent = "Run cancelled.";
+            }
         }
 
         function makeCompareContext(array, container, comparisonElement, swapElement, timeElement) {
@@ -1188,8 +1224,10 @@
         }
 
         async function compareDelay(ctx) {
+            ensureRunIsActive();
             ctx.tick();
             await sleep(Math.max(5, Math.floor(getDelay() * 0.75)));
+            ensureRunIsActive();
         }
 
         function ctxRange(ctx, start, end) {
@@ -1405,16 +1443,19 @@
         }
 
         function showSingleView() {
+            if (isSorting) return;
             isComparisonView = false;
             singleTopControls.classList.remove("hidden");
             comparisonTopControls.classList.add("hidden");
             singleView.classList.remove("hidden");
             comparisonSection.classList.add("hidden");
             toggleCompareBtn.textContent = "Switch to Comparison View";
+            sortBtn.textContent = "Start Sort";
             renderBars();
         }
 
         function showComparisonView() {
+            if (isSorting) return;
             isComparisonView = true;
             syncSingleControlsToCompare();
             singleTopControls.classList.add("hidden");
@@ -1422,8 +1463,25 @@
             singleView.classList.add("hidden");
             comparisonSection.classList.remove("hidden");
             toggleCompareBtn.textContent = "Switch to Single View";
+            sortBtn.textContent = "Start Comparison";
             renderBarsTo(leftCompareBars, values);
             renderBarsTo(rightCompareBars, values);
+        }
+
+        function getDifferentAlgorithm(selectedAlgorithm) {
+            return Object.keys(algorithms).find(algorithm => algorithm !== selectedAlgorithm) || selectedAlgorithm;
+        }
+
+        function keepComparisonAlgorithmsDifferent(changedSide = "left") {
+            if (leftCompareSelect.value !== rightCompareSelect.value) return;
+
+            if (changedSide === "left") {
+                rightCompareSelect.value = getDifferentAlgorithm(leftCompareSelect.value);
+                rightCompareTitle.textContent = algorithms[rightCompareSelect.value];
+            } else {
+                leftCompareSelect.value = getDifferentAlgorithm(rightCompareSelect.value);
+                leftCompareTitle.textContent = algorithms[leftCompareSelect.value];
+            }
         }
 
         function getSettingsForShare() {
@@ -1459,6 +1517,7 @@
 
             sizeValue.textContent = sizeSlider.value;
             speedValue.textContent = `${speedSlider.value}ms`;
+            keepComparisonAlgorithmsDifferent("left");
             leftCompareTitle.textContent = algorithms[leftCompareSelect.value];
             rightCompareTitle.textContent = algorithms[rightCompareSelect.value];
             updateDescription();
@@ -1533,7 +1592,17 @@
 
         async function startComparison() {
             if (isSorting) return;
-            compareBtn.disabled = true;
+            keepComparisonAlgorithmsDifferent("left");
+
+            if (leftCompareSelect.value === rightCompareSelect.value) {
+                statusText.textContent = "Choose two different algorithms for comparison.";
+                return;
+            }
+
+            currentRunToken = ++activeRunToken;
+            setSortingState(true);
+            sortBtn.textContent = "Running Comparison...";
+
             const startingArray = values.length ? [...values] : buildArray();
             const leftArray = [...startingArray];
             const rightArray = [...startingArray];
@@ -1549,12 +1618,27 @@
             leftCtx.render();
             rightCtx.render();
 
-            await Promise.all([
-                runCompareAlgorithm(leftCompareSelect.value, leftCtx),
-                runCompareAlgorithm(rightCompareSelect.value, rightCtx)
-            ]);
+            try {
+                await Promise.all([
+                    runCompareAlgorithm(leftCompareSelect.value, leftCtx),
+                    runCompareAlgorithm(rightCompareSelect.value, rightCtx)
+                ]);
+                setSortingState(false);
+                sortBtn.textContent = "Start Comparison";
+            } catch (error) {
+                if (error.message !== "RUN_CANCELLED") throw error;
+                setSortingState(false);
+                sortBtn.textContent = "Start Comparison";
+            }
+        }
 
-            compareBtn.disabled = false;
+
+        async function startActiveRun() {
+            if (isComparisonView) {
+                await startComparison();
+            } else {
+                await startSort();
+            }
         }
 
         randomizeBtn.addEventListener("click", generateArray);
@@ -1563,12 +1647,16 @@
             generateArray();
             syncSingleControlsToCompare();
         });
-        sortBtn.addEventListener("click", startSort);
+        sortBtn.addEventListener("click", startActiveRun);
         pauseBtn.addEventListener("click", pauseSort);
         resumeBtn.addEventListener("click", resumeSort);
         stepBtn.addEventListener("click", stepSort);
-        compareBtn.addEventListener("click", startComparison);
         toggleCompareBtn.addEventListener("click", () => {
+            if (isSorting) {
+                statusText.textContent = "Finish the current run before switching views.";
+                return;
+            }
+
             if (isComparisonView) {
                 syncCompareControlsToSingle();
                 showSingleView();
@@ -1588,8 +1676,17 @@
             }
         });
 
-        leftCompareSelect.addEventListener("change", () => leftCompareTitle.textContent = algorithms[leftCompareSelect.value]);
-        rightCompareSelect.addEventListener("change", () => rightCompareTitle.textContent = algorithms[rightCompareSelect.value]);
+        leftCompareSelect.addEventListener("change", () => {
+            keepComparisonAlgorithmsDifferent("left");
+            leftCompareTitle.textContent = algorithms[leftCompareSelect.value];
+            rightCompareTitle.textContent = algorithms[rightCompareSelect.value];
+        });
+
+        rightCompareSelect.addEventListener("change", () => {
+            keepComparisonAlgorithmsDifferent("right");
+            leftCompareTitle.textContent = algorithms[leftCompareSelect.value];
+            rightCompareTitle.textContent = algorithms[rightCompareSelect.value];
+        });
 
         sizeSlider.addEventListener("input", () => {
             sizeValue.textContent = sizeSlider.value;
@@ -1622,6 +1719,7 @@
         fillAlgorithmSelect(algorithmSelect, "bubble");
         fillAlgorithmSelect(leftCompareSelect, "bubble");
         fillAlgorithmSelect(rightCompareSelect, "quick");
+        keepComparisonAlgorithmsDifferent("left");
         syncSingleControlsToCompare();
         updateDescription();
         applyTheme();
