@@ -1,0 +1,544 @@
+:root {
+            --bg: #111827;
+            --text: #f9fafb;
+            --subtle: #9ca3af;
+            --muted: #d1d5db;
+            --panel: #1f2937;
+            --panel-border: #374151;
+            --input-bg: #374151;
+            --chart-bg: #030712;
+            --bar: #3b82f6;
+        }
+
+        body.light {
+            --bg: #f8fafc;
+            --text: #0f172a;
+            --subtle: #64748b;
+            --muted: #334155;
+            --panel: #ffffff;
+            --panel-border: #cbd5e1;
+            --input-bg: #e2e8f0;
+            --chart-bg: #f1f5f9;
+            --bar: #2563eb;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            text-align: center;
+        }
+
+        h2 {
+            margin: 28px 0 12px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: var(--subtle);
+            margin: 0 0 24px;
+            text-align: center;
+        }
+
+        .controls,
+        .stats,
+        .description,
+        .compare-card,
+        .side-panel {
+            width: min(100%, 1000px);
+            background: var(--panel);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .primary-controls {
+            margin-bottom: 20px;
+        }
+
+        .visualizer-layout {
+            width: min(100%, 1400px);
+            display: grid;
+            grid-template-columns: 220px minmax(0, 1fr) 220px;
+            gap: 16px;
+            align-items: start;
+        }
+
+        .visualizer-main {
+            min-width: 0;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .side-panel {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: sticky;
+            top: 16px;
+        }
+
+            .side-panel h3 {
+                margin: 0 0 4px;
+                font-size: 1rem;
+                color: var(--text);
+                text-align: center;
+            }
+
+            .side-panel label {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 6px;
+            }
+
+            .side-panel .checkbox-label {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .side-panel button,
+            .side-panel select,
+            .side-panel input {
+                width: 100%;
+            }
+
+        .hidden {
+            display: none;
+        }
+
+        .view-section,
+        .comparison-section {
+            width: 100%;
+        }
+
+        .comparison-section {
+            margin-top: 0;
+        }
+
+            .comparison-section:not(.hidden) {
+                display: block;
+            }
+
+        .stats {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 18px;
+            color: var(--muted);
+        }
+
+        .description {
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+            .description strong,
+            .stats strong,
+            .compare-card strong {
+                color: var(--text);
+            }
+
+        button,
+        select,
+        input {
+            border: none;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 14px;
+            max-width: 100%;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            cursor: pointer;
+        }
+
+            button:hover:not(:disabled) {
+                background: #1d4ed8;
+            }
+
+            button:disabled,
+            select:disabled,
+            input:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+        select,
+        input {
+            background: var(--input-bg);
+            color: var(--text);
+        }
+
+        label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--muted);
+            font-size: 14px;
+            min-width: 0;
+        }
+
+        input[type="range"] {
+            width: 130px;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            padding: 0;
+        }
+
+        input[type="number"] {
+            width: 80px;
+        }
+
+        #bar-container,
+        .compare-bars {
+            background: var(--chart-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            overflow: hidden;
+        }
+
+        #bar-container {
+            width: 100%;
+            height: 420px;
+        }
+
+        .bar {
+            flex: 1;
+            background: var(--bar);
+            border-radius: 4px 4px 0 0;
+            transition: height 0.08s linear, background-color 0.08s linear, box-shadow 0.08s linear, outline 0.08s linear;
+        }
+
+            .bar.range {
+                outline: 2px solid #0ea5e9;
+                outline-offset: -2px;
+            }
+
+            .bar.compare {
+                background: #fde047;
+                box-shadow: 0 0 12px rgba(253, 224, 71, 0.7);
+            }
+
+            .bar.swap {
+                background: #fb923c;
+                box-shadow: 0 0 12px rgba(251, 146, 60, 0.8);
+            }
+
+            .bar.sorted {
+                background: #22c55e;
+                box-shadow: none;
+            }
+
+            .bar.pivot {
+                outline: 3px solid #e879f9;
+                outline-offset: -3px;
+            }
+
+            .bar.current {
+                border-top: 5px solid #f9fafb;
+            }
+
+        .status {
+            margin-top: 16px;
+            color: var(--muted);
+            min-height: 24px;
+            text-align: center;
+        }
+
+        .compare-grid {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .compare-card {
+            width: 100%;
+            margin-bottom: 0;
+        }
+
+            .compare-card h3 {
+                margin: 0 0 8px;
+                text-align: center;
+            }
+
+        .compare-bars {
+            height: 280px;
+            margin-top: 12px;
+        }
+
+        .compare-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            color: var(--muted);
+            font-size: 13px;
+            text-align: center;
+        }
+
+        @media (max-width: 1100px) {
+            .visualizer-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .side-panel {
+                position: static;
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+                .side-panel h3 {
+                    grid-column: 1 / -1;
+                }
+        }
+
+        @media (max-width: 800px) {
+            .controls {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                align-items: center;
+            }
+
+                .controls button,
+                .controls label {
+                    width: 100%;
+                }
+
+                .controls label {
+                    justify-content: space-between;
+                }
+
+                .controls select,
+                .controls input[type="range"] {
+                    flex: 1;
+                }
+
+            .stats {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                text-align: center;
+            }
+
+            .side-panel {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .compare-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 650px) {
+            body {
+                padding: 16px;
+            }
+
+            h1 {
+                font-size: 1.6rem;
+            }
+
+            .subtitle {
+                font-size: 0.95rem;
+            }
+
+            .controls {
+                grid-template-columns: 1fr;
+            }
+
+            .side-panel {
+                grid-template-columns: 1fr;
+            }
+
+            .controls label {
+                flex-wrap: wrap;
+            }
+
+            .controls select,
+            .controls input[type="range"] {
+                width: 100%;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .description {
+                font-size: 13px;
+            }
+
+            #bar-container {
+                height: 320px;
+                gap: 2px;
+                padding: 8px;
+            }
+
+            .compare-bars {
+                height: 240px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            body {
+                padding: 12px;
+            }
+
+            .controls,
+            .stats,
+            .description,
+            .compare-card,
+            .side-panel {
+                padding: 12px;
+            }
+
+            #bar-container {
+                height: 260px;
+                gap: 1px;
+            }
+
+            .compare-bars {
+                height: 210px;
+                gap: 1px;
+            }
+
+            button,
+            select,
+            input {
+                font-size: 13px;
+            }
+        }
+    
+
+        .how-to {
+            width: min(100%, 1000px);
+            background: var(--panel);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .how-to h2 {
+            margin: 0 0 8px;
+            font-size: 1.1rem;
+            text-align: center;
+            color: var(--text);
+        }
+
+        .how-to p {
+            margin: 0;
+            text-align: center;
+        }
+
+        .legend {
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            align-items: center;
+            margin: 0 0 16px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .legend div {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-box {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            display: inline-block;
+            background: var(--bar);
+        }
+
+        .legend-box.compare {
+            background: #fde047;
+            box-shadow: 0 0 8px rgba(253, 224, 71, 0.6);
+        }
+
+        .legend-box.swap {
+            background: #fb923c;
+            box-shadow: 0 0 8px rgba(251, 146, 60, 0.6);
+        }
+
+        .legend-box.sorted {
+            background: #22c55e;
+        }
+
+        .legend-box.pivot {
+            background: transparent;
+            outline: 3px solid #e879f9;
+            outline-offset: -3px;
+        }
+
+        .legend-box.current {
+            background: var(--bar);
+            border-top: 5px solid #f9fafb;
+        }
+
+        .legend-box.range {
+            background: var(--bar);
+            outline: 2px solid #0ea5e9;
+            outline-offset: -2px;
+        }
+
+        .footer-credit {
+            width: min(100%, 1000px);
+            margin-top: 24px;
+            padding: 16px;
+            text-align: center;
+            color: var(--subtle);
+            font-size: 14px;
+        }
+
+        .footer-credit a {
+            color: #60a5fa;
+            text-decoration: none;
+        }
+
+        .footer-credit a:hover {
+            text-decoration: underline;
+        }
