@@ -26,6 +26,11 @@
             text-align: center;
         }
 
+        h2 {
+            margin: 28px 0 12px;
+            text-align: center;
+        }
+
         .subtitle {
             color: #9ca3af;
             margin: 0 0 24px;
@@ -34,7 +39,8 @@
 
         .controls,
         .stats,
-        .description {
+        .description,
+        .compare-card {
             width: min(100%, 1000px);
             background: #1f2937;
             border: 1px solid #374151;
@@ -65,7 +71,8 @@
         }
 
             .description strong,
-            .stats strong {
+            .stats strong,
+            .compare-card strong {
                 color: #f9fafb;
             }
 
@@ -121,9 +128,12 @@
             padding: 0;
         }
 
-        #bar-container {
-            width: min(100%, 1000px);
-            height: 420px;
+        input[type="number"] {
+            width: 80px;
+        }
+
+        #bar-container,
+        .compare-bars {
             background: #030712;
             border: 1px solid #374151;
             border-radius: 12px;
@@ -132,6 +142,11 @@
             align-items: flex-end;
             gap: 3px;
             overflow: hidden;
+        }
+
+        #bar-container {
+            width: min(100%, 1000px);
+            height: 420px;
         }
 
         .bar {
@@ -177,6 +192,37 @@
             text-align: center;
         }
 
+        .compare-grid {
+            width: min(100%, 1000px);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .compare-card {
+            width: 100%;
+            margin-bottom: 0;
+        }
+
+            .compare-card h3 {
+                margin: 0 0 8px;
+                text-align: center;
+            }
+
+        .compare-bars {
+            height: 280px;
+            margin-top: 12px;
+        }
+
+        .compare-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            color: #d1d5db;
+            font-size: 13px;
+            text-align: center;
+        }
+
         @media (max-width: 800px) {
             .controls {
                 display: grid;
@@ -202,6 +248,10 @@
                 display: grid;
                 grid-template-columns: 1fr 1fr 1fr;
                 text-align: center;
+            }
+
+            .compare-grid {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -245,6 +295,10 @@
                 gap: 2px;
                 padding: 8px;
             }
+
+            .compare-bars {
+                height: 240px;
+            }
         }
 
         @media (max-width: 420px) {
@@ -254,12 +308,18 @@
 
             .controls,
             .stats,
-            .description {
+            .description,
+            .compare-card {
                 padding: 12px;
             }
 
             #bar-container {
                 height: 260px;
+                gap: 1px;
+            }
+
+            .compare-bars {
+                height: 210px;
                 gap: 1px;
             }
 
@@ -280,15 +340,7 @@
 
         <label>
             Algorithm
-            <select id="algorithmSelect">
-                <option value="bubble">Bubble Sort</option>
-                <option value="selection">Selection Sort</option>
-                <option value="insertion">Insertion Sort</option>
-                <option value="quick">Quick Sort</option>
-                <option value="merge">Merge Sort</option>
-                <option value="heap">Heap Sort</option>
-                <option value="shell">Shell Sort</option>
-            </select>
+            <select id="algorithmSelect"></select>
         </label>
 
         <label>
@@ -335,7 +387,6 @@
     </div>
 
     <div id="descriptionPanel" class="description"></div>
-
     <div id="complexityPanel" class="description"></div>
 
     <div class="stats">
@@ -347,7 +398,76 @@
     <div id="bar-container"></div>
     <div id="status" class="status">Ready.</div>
 
+    <h2>Side-by-Side Comparison</h2>
+    <p class="subtitle">Compare two algorithms using the same starting array.</p>
+
+    <div class="controls">
+        <label>
+            Left
+            <select id="leftCompareSelect"></select>
+        </label>
+
+        <label>
+            Right
+            <select id="rightCompareSelect"></select>
+        </label>
+
+        <button id="compareBtn">Start Comparison</button>
+    </div>
+
+    <div class="compare-grid">
+        <div class="compare-card">
+            <h3 id="leftCompareTitle">Bubble Sort</h3>
+            <div class="compare-stats">
+                <div><strong>Comp:</strong> <span id="leftComparisons">0</span></div>
+                <div><strong>Moves:</strong> <span id="leftSwaps">0</span></div>
+                <div><strong>Time:</strong> <span id="leftTime">0.00s</span></div>
+            </div>
+            <div id="leftCompareBars" class="compare-bars"></div>
+        </div>
+
+        <div class="compare-card">
+            <h3 id="rightCompareTitle">Quick Sort</h3>
+            <div class="compare-stats">
+                <div><strong>Comp:</strong> <span id="rightComparisons">0</span></div>
+                <div><strong>Moves:</strong> <span id="rightSwaps">0</span></div>
+                <div><strong>Time:</strong> <span id="rightTime">0.00s</span></div>
+            </div>
+            <div id="rightCompareBars" class="compare-bars"></div>
+        </div>
+    </div>
+
     <script>
+        const algorithms = {
+            bubble: "Bubble Sort",
+            selection: "Selection Sort",
+            insertion: "Insertion Sort",
+            quick: "Quick Sort",
+            merge: "Merge Sort",
+            heap: "Heap Sort",
+            shell: "Shell Sort"
+        };
+
+        const descriptions = {
+            bubble: "<strong>Bubble Sort:</strong> Repeatedly compares adjacent elements and swaps them if they are in the wrong order. Simple but inefficient: O(n²).",
+            selection: "<strong>Selection Sort:</strong> Repeatedly selects the smallest element and moves it to the front. O(n²), but usually performs fewer swaps than Bubble Sort.",
+            insertion: "<strong>Insertion Sort:</strong> Builds a sorted section one item at a time by inserting each value into its correct position. Strong for small or nearly sorted arrays.",
+            quick: "<strong>Quick Sort:</strong> Picks a pivot, partitions values around it, then recursively sorts each side. Very fast on average: O(n log n).",
+            merge: "<strong>Merge Sort:</strong> Splits the array into halves, sorts each half, then merges them back together. Stable and consistently O(n log n).",
+            heap: "<strong>Heap Sort:</strong> Builds a max heap, then repeatedly moves the largest value to the sorted end of the array. Consistently O(n log n) and sorts in place.",
+            shell: "<strong>Shell Sort:</strong> Improves Insertion Sort by comparing far-apart values first, then reducing the gap until the final pass is a normal insertion-style sort."
+        };
+
+        const complexities = {
+            bubble: { best: "O(n)", avg: "O(n²)", worst: "O(n²)", space: "O(1)" },
+            selection: { best: "O(n²)", avg: "O(n²)", worst: "O(n²)", space: "O(1)" },
+            insertion: { best: "O(n)", avg: "O(n²)", worst: "O(n²)", space: "O(1)" },
+            quick: { best: "O(n log n)", avg: "O(n log n)", worst: "O(n²)", space: "O(log n)" },
+            merge: { best: "O(n log n)", avg: "O(n log n)", worst: "O(n log n)", space: "O(n)" },
+            heap: { best: "O(n log n)", avg: "O(n log n)", worst: "O(n log n)", space: "O(1)" },
+            shell: { best: "O(n log n)", avg: "~O(n^1.3)", worst: "O(n²)", space: "O(1)" }
+        };
+
         const barContainer = document.getElementById("bar-container");
         const randomizeBtn = document.getElementById("randomizeBtn");
         const sortBtn = document.getElementById("sortBtn");
@@ -370,60 +490,48 @@
         const descriptionPanel = document.getElementById("descriptionPanel");
         const complexityPanel = document.getElementById("complexityPanel");
 
-        const descriptions = {
-
-            bubble: "<strong>Bubble Sort:</strong> Repeatedly compares adjacent elements and swaps them if they are in the wrong order. Simple but inefficient: O(n²).",
-            selection: "<strong>Selection Sort:</strong> Repeatedly selects the smallest element and moves it to the front. O(n²), but usually performs fewer swaps than Bubble Sort.",
-            insertion: "<strong>Insertion Sort:</strong> Builds a sorted section one item at a time by inserting each value into its correct position. Strong for small or nearly sorted arrays.",
-            quick: "<strong>Quick Sort:</strong> Picks a pivot, partitions values around it, then recursively sorts each side. Very fast on average: O(n log n).",
-            merge: "<strong>Merge Sort:</strong> Splits the array into halves, sorts each half, then merges them back together. Stable and consistently O(n log n).",
-            heap: "<strong>Heap Sort:</strong> Builds a max heap, then repeatedly moves the largest value to the sorted end of the array. Consistently O(n log n) and sorts in place.",
-            shell: "<strong>Shell Sort:</strong> Improves Insertion Sort by comparing far-apart values first, then reducing the gap until the final pass is a normal insertion-style sort."
-        };
-
-        const complexities = {
-            bubble: { best: "O(n)", avg: "O(n²)", worst: "O(n²)", space: "O(1)" },
-            selection: { best: "O(n²)", avg: "O(n²)", worst: "O(n²)", space: "O(1)" },
-            insertion: { best: "O(n)", avg: "O(n²)", worst: "O(n²)", space: "O(1)" },
-            quick: { best: "O(n log n)", avg: "O(n log n)", worst: "O(n²)", space: "O(log n)" },
-            merge: { best: "O(n log n)", avg: "O(n log n)", worst: "O(n log n)", space: "O(n)" },
-            heap: { best: "O(n log n)", avg: "O(n log n)", worst: "O(n log n)", space: "O(1)" },
-            shell: { best: "O(n log n)", avg: "~O(n^1.3)", worst: "O(n²)", space: "O(1)" }
-        };
+        const leftCompareSelect = document.getElementById("leftCompareSelect");
+        const rightCompareSelect = document.getElementById("rightCompareSelect");
+        const compareBtn = document.getElementById("compareBtn");
+        const leftCompareTitle = document.getElementById("leftCompareTitle");
+        const rightCompareTitle = document.getElementById("rightCompareTitle");
+        const leftCompareBars = document.getElementById("leftCompareBars");
+        const rightCompareBars = document.getElementById("rightCompareBars");
 
         let values = [];
         let isSorting = false;
         let isPaused = false;
         let stepRequested = false;
-
         let comparisons = 0;
         let swaps = 0;
         let elapsedMs = 0;
         let timerInterval = null;
         let lastTimerTick = 0;
-
         let audioContext = null;
 
-        function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
+        function fillAlgorithmSelect(select, defaultValue) {
+            select.innerHTML = "";
+            Object.entries(algorithms).forEach(([value, label]) => {
+                const option = document.createElement("option");
+                option.value = value;
+                option.textContent = label;
+                select.appendChild(option);
+            });
+            select.value = defaultValue;
         }
 
-        function getDelay() {
-            return Number(speedSlider.value);
-        }
+        function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+        function getDelay() { return Number(speedSlider.value); }
 
         function updateDescription() {
             const algo = algorithmSelect.value;
             descriptionPanel.innerHTML = descriptions[algo] || "";
-
             const c = complexities[algo];
-            if (c) {
-                complexityPanel.innerHTML = `
-              <strong>Time Complexity:</strong><br>
-              Best: ${c.best} &nbsp; | &nbsp; Avg: ${c.avg} &nbsp; | &nbsp; Worst: ${c.worst}<br>
-              <strong>Space Complexity:</strong> ${c.space}
-            `;
-            }
+            complexityPanel.innerHTML = `
+            <strong>Time Complexity:</strong><br>
+            Best: ${c.best} &nbsp; | &nbsp; Avg: ${c.avg} &nbsp; | &nbsp; Worst: ${c.worst}<br>
+            <strong>Space Complexity:</strong> ${c.space}
+          `;
         }
 
         function resetStats() {
@@ -446,15 +554,12 @@
         function startTimer() {
             clearInterval(timerInterval);
             lastTimerTick = performance.now();
-
             timerInterval = setInterval(() => {
                 const now = performance.now();
-
                 if (!isPaused) {
                     elapsedMs += now - lastTimerTick;
                     updateStats();
                 }
-
                 lastTimerTick = now;
             }, 100);
         }
@@ -467,24 +572,15 @@
 
         function playSound(value, type = "compare") {
             if (!soundToggle.checked) return;
-
-            if (!audioContext) {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            }
-
-            if (audioContext.state === "suspended") {
-                audioContext.resume();
-            }
+            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioContext.state === "suspended") audioContext.resume();
 
             const oscillator = audioContext.createOscillator();
             const gain = audioContext.createGain();
-            const frequency = 150 + value * 2;
-
-            oscillator.frequency.value = frequency;
+            oscillator.frequency.value = 150 + value * 2;
             oscillator.type = type === "swap" ? "square" : "sine";
             gain.gain.setValueAtTime(0.04, audioContext.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.05);
-
             oscillator.connect(gain);
             gain.connect(audioContext.destination);
             oscillator.start();
@@ -504,10 +600,7 @@
         }
 
         async function waitForNextAction() {
-            while (isPaused && !stepRequested) {
-                await sleep(25);
-            }
-
+            while (isPaused && !stepRequested) await sleep(25);
             if (stepRequested) {
                 stepRequested = false;
                 isPaused = true;
@@ -515,12 +608,8 @@
             }
 
             let remainingDelay = getDelay();
-
             while (remainingDelay > 0) {
-                if (isPaused) {
-                    return waitForNextAction();
-                }
-
+                if (isPaused) return waitForNextAction();
                 const chunk = Math.min(25, remainingDelay);
                 await sleep(chunk);
                 remainingDelay -= chunk;
@@ -529,60 +618,41 @@
 
         function getSortedTail(sortedCount) {
             const sorted = [];
-            for (let i = values.length - sortedCount; i < values.length; i++) {
-                if (i >= 0) sorted.push(i);
-            }
+            for (let i = values.length - sortedCount; i < values.length; i++) if (i >= 0) sorted.push(i);
             return sorted;
         }
 
-        function getRangeIndices(start, end) {
+        function getRangeIndices(start, end, length = values.length) {
             const range = [];
-            for (let i = start; i <= end; i++) {
-                if (i >= 0 && i < values.length) range.push(i);
-            }
+            for (let i = start; i <= end; i++) if (i >= 0 && i < length) range.push(i);
             return range;
         }
 
-        function renderBars({
-            compare = [],
-            swap = [],
-            sorted = [],
-            pivot = [],
-            current = [],
-            range = []
-        } = {}) {
-            barContainer.innerHTML = "";
-
-            values.forEach((value, index) => {
+        function renderBarsTo(container, array, states = {}) {
+            const { compare = [], swap = [], sorted = [], pivot = [], current = [], range = [] } = states;
+            container.innerHTML = "";
+            array.forEach((value, index) => {
                 const bar = document.createElement("div");
                 bar.classList.add("bar");
                 bar.style.height = `${value}px`;
-
                 if (range.includes(index)) bar.classList.add("range");
                 if (sorted.includes(index)) bar.classList.add("sorted");
                 if (compare.includes(index)) bar.classList.add("compare");
                 if (swap.includes(index)) bar.classList.add("swap");
                 if (pivot.includes(index)) bar.classList.add("pivot");
                 if (current.includes(index)) bar.classList.add("current");
-
-                barContainer.appendChild(bar);
+                container.appendChild(bar);
             });
         }
 
+        function renderBars(states = {}) { renderBarsTo(barContainer, values, states); }
+
         function clampValueSettings() {
-            let minValue = Number(minValueInput.value);
-            let maxValue = Number(maxValueInput.value);
-
-            minValue = Math.max(10, Math.min(390, minValue));
-            maxValue = Math.max(20, Math.min(410, maxValue));
-
-            if (minValue >= maxValue) {
-                maxValue = minValue + 10;
-            }
-
+            let minValue = Math.max(10, Math.min(390, Number(minValueInput.value)));
+            let maxValue = Math.max(20, Math.min(410, Number(maxValueInput.value)));
+            if (minValue >= maxValue) maxValue = minValue + 10;
             minValueInput.value = minValue;
             maxValueInput.value = maxValue;
-
             return { minValue, maxValue };
         }
 
@@ -592,49 +662,39 @@
 
         function shuffleSomeValues(array, swapsToMake) {
             for (let i = 0; i < swapsToMake; i++) {
-                const firstIndex = Math.floor(Math.random() * array.length);
-                const secondIndex = Math.floor(Math.random() * array.length);
-                [array[firstIndex], array[secondIndex]] = [array[secondIndex], array[firstIndex]];
+                const a = Math.floor(Math.random() * array.length);
+                const b = Math.floor(Math.random() * array.length);
+                [array[a], array[b]] = [array[b], array[a]];
             }
         }
 
-        function generateArray() {
+        function buildArray() {
             const size = Number(sizeSlider.value);
             const { minValue, maxValue } = clampValueSettings();
             const arrayType = arrayTypeSelect.value;
-            values = [];
+            const array = [];
 
             if (arrayType === "random") {
-                for (let i = 0; i < size; i++) {
-                    values.push(getRandomValue(minValue, maxValue));
-                }
+                for (let i = 0; i < size; i++) array.push(getRandomValue(minValue, maxValue));
             } else if (arrayType === "nearlySorted") {
-                for (let i = 0; i < size; i++) {
-                    const value = minValue + Math.round(((maxValue - minValue) / Math.max(1, size - 1)) * i);
-                    values.push(value);
-                }
-                shuffleSomeValues(values, Math.max(1, Math.floor(size * 0.1)));
+                for (let i = 0; i < size; i++) array.push(minValue + Math.round(((maxValue - minValue) / Math.max(1, size - 1)) * i));
+                shuffleSomeValues(array, Math.max(1, Math.floor(size * 0.1)));
             } else if (arrayType === "reverse") {
-                for (let i = 0; i < size; i++) {
-                    const value = maxValue - Math.round(((maxValue - minValue) / Math.max(1, size - 1)) * i);
-                    values.push(value);
-                }
+                for (let i = 0; i < size; i++) array.push(maxValue - Math.round(((maxValue - minValue) / Math.max(1, size - 1)) * i));
             } else if (arrayType === "fewUnique") {
-                const uniqueValues = [
-                    minValue,
-                    Math.round(minValue + (maxValue - minValue) * 0.25),
-                    Math.round(minValue + (maxValue - minValue) * 0.5),
-                    Math.round(minValue + (maxValue - minValue) * 0.75),
-                    maxValue
-                ];
-
-                for (let i = 0; i < size; i++) {
-                    values.push(uniqueValues[Math.floor(Math.random() * uniqueValues.length)]);
-                }
+                const unique = [minValue, Math.round(minValue + (maxValue - minValue) * 0.25), Math.round(minValue + (maxValue - minValue) * 0.5), Math.round(minValue + (maxValue - minValue) * 0.75), maxValue];
+                for (let i = 0; i < size; i++) array.push(unique[Math.floor(Math.random() * unique.length)]);
             }
 
+            return array;
+        }
+
+        function generateArray() {
+            values = buildArray();
             resetStats();
             renderBars();
+            renderBarsTo(leftCompareBars, values);
+            renderBarsTo(rightCompareBars, values);
             statusText.textContent = "Array generated.";
         }
 
@@ -655,11 +715,10 @@
             minValueInput.disabled = sorting;
             maxValueInput.disabled = sorting;
             arrayTypeSelect.disabled = sorting;
-
+            compareBtn.disabled = sorting;
             pauseBtn.disabled = !sorting;
             resumeBtn.disabled = true;
             stepBtn.disabled = !sorting;
-
             if (!sorting) {
                 isPaused = false;
                 stepRequested = false;
@@ -683,7 +742,7 @@
             pauseBtn.disabled = false;
             resumeBtn.disabled = true;
             stepBtn.disabled = false;
-            statusText.textContent = `Running ${algorithmSelect.options[algorithmSelect.selectedIndex].text}...`;
+            statusText.textContent = `Running ${algorithms[algorithmSelect.value]}...`;
         }
 
         function stepSort() {
@@ -701,9 +760,7 @@
                 for (let j = 0; j < values.length - i - 1; j++) {
                     renderBars({ compare: [j, j + 1], sorted: getSortedTail(i) });
                     await waitForNextAction();
-
                     addComparison(values[j]);
-
                     if (values[j] > values[j + 1]) {
                         [values[j], values[j + 1]] = [values[j + 1], values[j]];
                         addSwap(values[j]);
@@ -716,56 +773,40 @@
 
         async function selectionSort() {
             const sorted = [];
-
             for (let i = 0; i < values.length - 1; i++) {
                 let minIndex = i;
-
                 for (let j = i + 1; j < values.length; j++) {
                     renderBars({ compare: [minIndex, j], current: [i], sorted });
                     await waitForNextAction();
-
                     addComparison(values[j]);
-
-                    if (values[j] < values[minIndex]) {
-                        minIndex = j;
-                    }
+                    if (values[j] < values[minIndex]) minIndex = j;
                 }
-
                 if (minIndex !== i) {
                     [values[i], values[minIndex]] = [values[minIndex], values[i]];
                     addSwap(values[i]);
                     renderBars({ swap: [i, minIndex], sorted });
                     await waitForNextAction();
                 }
-
                 sorted.push(i);
             }
         }
 
         async function insertionSort() {
             const sorted = [0];
-
             for (let i = 1; i < values.length; i++) {
                 const currentValue = values[i];
                 let j = i - 1;
-
                 renderBars({ compare: [i, j], current: [i], sorted });
                 await waitForNextAction();
-
                 while (j >= 0) {
                     addComparison(values[j]);
-
-                    if (values[j] <= currentValue) {
-                        break;
-                    }
-
+                    if (values[j] <= currentValue) break;
                     values[j + 1] = values[j];
                     addSwap(values[j + 1]);
                     renderBars({ compare: [j, j + 1], swap: [j + 1], sorted });
                     await waitForNextAction();
                     j--;
                 }
-
                 values[j + 1] = currentValue;
                 addSwap(currentValue);
                 renderBars({ swap: [j + 1], sorted });
@@ -776,7 +817,6 @@
 
         async function quickSort(start = 0, end = values.length - 1) {
             if (start >= end) return;
-
             const pivotIndex = await partition(start, end);
             await quickSort(start, pivotIndex - 1);
             await quickSort(pivotIndex + 1, end);
@@ -785,46 +825,27 @@
         async function partition(start, end) {
             const pivotValue = values[end];
             let pivotIndex = start;
-
             for (let i = start; i < end; i++) {
-                renderBars({
-                    compare: [i],
-                    pivot: [end],
-                    current: [pivotIndex],
-                    range: getRangeIndices(start, end)
-                });
+                renderBars({ compare: [i], pivot: [end], current: [pivotIndex], range: getRangeIndices(start, end) });
                 await waitForNextAction();
-
                 addComparison(values[i]);
-
                 if (values[i] < pivotValue) {
                     [values[i], values[pivotIndex]] = [values[pivotIndex], values[i]];
                     addSwap(values[pivotIndex]);
-                    renderBars({
-                        swap: [i, pivotIndex],
-                        pivot: [end],
-                        range: getRangeIndices(start, end)
-                    });
+                    renderBars({ swap: [i, pivotIndex], pivot: [end], range: getRangeIndices(start, end) });
                     await waitForNextAction();
                     pivotIndex++;
                 }
             }
-
             [values[pivotIndex], values[end]] = [values[end], values[pivotIndex]];
             addSwap(values[pivotIndex]);
-            renderBars({
-                swap: [pivotIndex, end],
-                pivot: [pivotIndex],
-                range: getRangeIndices(start, end)
-            });
+            renderBars({ swap: [pivotIndex, end], pivot: [pivotIndex], range: getRangeIndices(start, end) });
             await waitForNextAction();
-
             return pivotIndex;
         }
 
         async function mergeSort(start = 0, end = values.length - 1) {
             if (start >= end) return;
-
             const middle = Math.floor((start + end) / 2);
             await mergeSort(start, middle);
             await mergeSort(middle + 1, end);
@@ -837,79 +858,39 @@
             let leftIndex = 0;
             let rightIndex = 0;
             let mainIndex = start;
-
             while (leftIndex < left.length && rightIndex < right.length) {
-                renderBars({
-                    compare: [start + leftIndex, middle + 1 + rightIndex],
-                    current: [mainIndex],
-                    range: getRangeIndices(start, end)
-                });
+                renderBars({ compare: [start + leftIndex, middle + 1 + rightIndex], current: [mainIndex], range: getRangeIndices(start, end) });
                 await waitForNextAction();
-
                 addComparison(values[mainIndex]);
-
-                if (left[leftIndex] <= right[rightIndex]) {
-                    values[mainIndex] = left[leftIndex];
-                    leftIndex++;
-                } else {
-                    values[mainIndex] = right[rightIndex];
-                    rightIndex++;
-                }
-
-                addSwap(values[mainIndex]);
-                renderBars({
-                    swap: [mainIndex],
-                    current: [mainIndex],
-                    range: getRangeIndices(start, end)
-                });
+                if (left[leftIndex] <= right[rightIndex]) values[mainIndex++] = left[leftIndex++];
+                else values[mainIndex++] = right[rightIndex++];
+                addSwap(values[mainIndex - 1]);
+                renderBars({ swap: [mainIndex - 1], current: [mainIndex - 1], range: getRangeIndices(start, end) });
                 await waitForNextAction();
-                mainIndex++;
             }
-
             while (leftIndex < left.length) {
-                values[mainIndex] = left[leftIndex];
+                values[mainIndex] = left[leftIndex++];
                 addSwap(values[mainIndex]);
-                renderBars({
-                    compare: [start + leftIndex],
-                    swap: [mainIndex],
-                    current: [mainIndex],
-                    range: getRangeIndices(start, end)
-                });
+                renderBars({ swap: [mainIndex], current: [mainIndex], range: getRangeIndices(start, end) });
                 await waitForNextAction();
-                leftIndex++;
                 mainIndex++;
             }
-
             while (rightIndex < right.length) {
-                values[mainIndex] = right[rightIndex];
+                values[mainIndex] = right[rightIndex++];
                 addSwap(values[mainIndex]);
-                renderBars({
-                    compare: [middle + 1 + rightIndex],
-                    swap: [mainIndex],
-                    current: [mainIndex],
-                    range: getRangeIndices(start, end)
-                });
+                renderBars({ swap: [mainIndex], current: [mainIndex], range: getRangeIndices(start, end) });
                 await waitForNextAction();
-                rightIndex++;
                 mainIndex++;
             }
         }
 
         async function heapSort() {
             const length = values.length;
-
-            for (let i = Math.floor(length / 2) - 1; i >= 0; i--) {
-                await heapify(length, i);
-            }
-
+            for (let i = Math.floor(length / 2) - 1; i >= 0; i--) await heapify(length, i);
             for (let end = length - 1; end > 0; end--) {
                 [values[0], values[end]] = [values[end], values[0]];
                 addSwap(values[end]);
-                renderBars({
-                    swap: [0, end],
-                    sorted: getSortedTail(length - 1 - end),
-                    range: getRangeIndices(0, end)
-                });
+                renderBars({ swap: [0, end], sorted: getSortedTail(length - 1 - end), range: getRangeIndices(0, end) });
                 await waitForNextAction();
                 await heapify(end, 0);
             }
@@ -921,27 +902,18 @@
             const right = 2 * rootIndex + 2;
             const sorted = getSortedTail(values.length - heapSize);
             const range = getRangeIndices(0, heapSize - 1);
-
             if (left < heapSize) {
                 renderBars({ compare: [largest, left], pivot: [largest], current: [left], sorted, range });
                 await waitForNextAction();
                 addComparison(values[left]);
-
-                if (values[left] > values[largest]) {
-                    largest = left;
-                }
+                if (values[left] > values[largest]) largest = left;
             }
-
             if (right < heapSize) {
                 renderBars({ compare: [largest, right], pivot: [largest], current: [right], sorted, range });
                 await waitForNextAction();
                 addComparison(values[right]);
-
-                if (values[right] > values[largest]) {
-                    largest = right;
-                }
+                if (values[right] > values[largest]) largest = right;
             }
-
             if (largest !== rootIndex) {
                 [values[rootIndex], values[largest]] = [values[largest], values[rootIndex]];
                 addSwap(values[rootIndex]);
@@ -953,71 +925,314 @@
 
         async function shellSort() {
             let gap = Math.floor(values.length / 2);
-
             while (gap > 0) {
                 for (let i = gap; i < values.length; i++) {
                     const temp = values[i];
                     let j = i;
-
                     renderBars({ compare: [i, j - gap], current: [i], range: getRangeIndices(0, values.length - 1) });
                     await waitForNextAction();
-
                     while (j >= gap) {
                         addComparison(values[j - gap]);
-
-                        if (values[j - gap] <= temp) {
-                            break;
-                        }
-
+                        if (values[j - gap] <= temp) break;
                         values[j] = values[j - gap];
                         addSwap(values[j]);
                         renderBars({ compare: [j, j - gap], swap: [j], current: [j], range: getRangeIndices(0, values.length - 1) });
                         await waitForNextAction();
                         j -= gap;
                     }
-
                     values[j] = temp;
                     addSwap(temp);
                     renderBars({ swap: [j], current: [j], range: getRangeIndices(0, values.length - 1) });
                     await waitForNextAction();
                 }
-
                 gap = Math.floor(gap / 2);
             }
         }
 
         async function startSort() {
             if (isSorting) return;
-
             resetStats();
             isPaused = false;
             stepRequested = false;
             setSortingState(true);
             startTimer();
-            statusText.textContent = `Running ${algorithmSelect.options[algorithmSelect.selectedIndex].text}...`;
-
-            const algorithm = algorithmSelect.value;
-
-            if (algorithm === "bubble") {
-                await bubbleSort();
-            } else if (algorithm === "selection") {
-                await selectionSort();
-            } else if (algorithm === "insertion") {
-                await insertionSort();
-            } else if (algorithm === "quick") {
-                await quickSort();
-            } else if (algorithm === "merge") {
-                await mergeSort();
-            } else if (algorithm === "heap") {
-                await heapSort();
-            } else if (algorithm === "shell") {
-                await shellSort();
-            }
-
+            statusText.textContent = `Running ${algorithms[algorithmSelect.value]}...`;
+            if (algorithmSelect.value === "bubble") await bubbleSort();
+            else if (algorithmSelect.value === "selection") await selectionSort();
+            else if (algorithmSelect.value === "insertion") await insertionSort();
+            else if (algorithmSelect.value === "quick") await quickSort();
+            else if (algorithmSelect.value === "merge") await mergeSort();
+            else if (algorithmSelect.value === "heap") await heapSort();
+            else if (algorithmSelect.value === "shell") await shellSort();
             await markAllSorted();
             stopTimer();
             setSortingState(false);
             statusText.textContent = "Sorting complete.";
+        }
+
+        function makeCompareContext(array, container, comparisonElement, swapElement, timeElement) {
+            return {
+                array,
+                container,
+                comparisons: 0,
+                swaps: 0,
+                elapsed: 0,
+                lastTick: performance.now(),
+                comparisonElement,
+                swapElement,
+                timeElement,
+                update() {
+                    this.comparisonElement.textContent = this.comparisons;
+                    this.swapElement.textContent = this.swaps;
+                    this.timeElement.textContent = `${(this.elapsed / 1000).toFixed(2)}s`;
+                },
+                tick() {
+                    const now = performance.now();
+                    this.elapsed += now - this.lastTick;
+                    this.lastTick = now;
+                    this.update();
+                },
+                render(states = {}) {
+                    renderBarsTo(this.container, this.array, states);
+                },
+                compare(value) {
+                    this.comparisons++;
+                    this.update();
+                },
+                move() {
+                    this.swaps++;
+                    this.update();
+                }
+            };
+        }
+
+        async function compareDelay(ctx) {
+            ctx.tick();
+            await sleep(Math.max(5, Math.floor(getDelay() * 0.75)));
+        }
+
+        function ctxRange(ctx, start, end) {
+            return getRangeIndices(start, end, ctx.array.length);
+        }
+
+        function ctxSortedTail(ctx, count) {
+            const sorted = [];
+            for (let i = ctx.array.length - count; i < ctx.array.length; i++) if (i >= 0) sorted.push(i);
+            return sorted;
+        }
+
+        async function runCompareAlgorithm(type, ctx) {
+            if (type === "bubble") await compareBubble(ctx);
+            else if (type === "selection") await compareSelection(ctx);
+            else if (type === "insertion") await compareInsertion(ctx);
+            else if (type === "quick") await compareQuick(ctx, 0, ctx.array.length - 1);
+            else if (type === "merge") await compareMergeSort(ctx, 0, ctx.array.length - 1);
+            else if (type === "heap") await compareHeap(ctx);
+            else if (type === "shell") await compareShell(ctx);
+            ctx.render({ sorted: ctxRange(ctx, 0, ctx.array.length - 1) });
+            ctx.tick();
+        }
+
+        async function compareBubble(ctx) {
+            const a = ctx.array;
+            for (let i = 0; i < a.length - 1; i++) {
+                for (let j = 0; j < a.length - i - 1; j++) {
+                    ctx.render({ compare: [j, j + 1], sorted: ctxSortedTail(ctx, i) });
+                    await compareDelay(ctx);
+                    ctx.compare();
+                    if (a[j] > a[j + 1]) {
+                        [a[j], a[j + 1]] = [a[j + 1], a[j]];
+                        ctx.move();
+                        ctx.render({ swap: [j, j + 1], sorted: ctxSortedTail(ctx, i) });
+                        await compareDelay(ctx);
+                    }
+                }
+            }
+        }
+
+        async function compareSelection(ctx) {
+            const a = ctx.array;
+            const sorted = [];
+            for (let i = 0; i < a.length - 1; i++) {
+                let min = i;
+                for (let j = i + 1; j < a.length; j++) {
+                    ctx.render({ compare: [min, j], current: [i], sorted });
+                    await compareDelay(ctx);
+                    ctx.compare();
+                    if (a[j] < a[min]) min = j;
+                }
+                if (min !== i) {
+                    [a[i], a[min]] = [a[min], a[i]];
+                    ctx.move();
+                    ctx.render({ swap: [i, min], sorted });
+                    await compareDelay(ctx);
+                }
+                sorted.push(i);
+            }
+        }
+
+        async function compareInsertion(ctx) {
+            const a = ctx.array;
+            const sorted = [0];
+            for (let i = 1; i < a.length; i++) {
+                const current = a[i];
+                let j = i - 1;
+                while (j >= 0) {
+                    ctx.render({ compare: [j, j + 1], current: [i], sorted });
+                    await compareDelay(ctx);
+                    ctx.compare();
+                    if (a[j] <= current) break;
+                    a[j + 1] = a[j];
+                    ctx.move();
+                    ctx.render({ swap: [j + 1], sorted });
+                    await compareDelay(ctx);
+                    j--;
+                }
+                a[j + 1] = current;
+                ctx.move();
+                sorted.push(i);
+            }
+        }
+
+        async function compareQuick(ctx, start, end) {
+            if (start >= end) return;
+            const pivot = await comparePartition(ctx, start, end);
+            await compareQuick(ctx, start, pivot - 1);
+            await compareQuick(ctx, pivot + 1, end);
+        }
+
+        async function comparePartition(ctx, start, end) {
+            const a = ctx.array;
+            const pivotValue = a[end];
+            let pivotIndex = start;
+            for (let i = start; i < end; i++) {
+                ctx.render({ compare: [i], pivot: [end], current: [pivotIndex], range: ctxRange(ctx, start, end) });
+                await compareDelay(ctx);
+                ctx.compare();
+                if (a[i] < pivotValue) {
+                    [a[i], a[pivotIndex]] = [a[pivotIndex], a[i]];
+                    ctx.move();
+                    ctx.render({ swap: [i, pivotIndex], pivot: [end], range: ctxRange(ctx, start, end) });
+                    await compareDelay(ctx);
+                    pivotIndex++;
+                }
+            }
+            [a[pivotIndex], a[end]] = [a[end], a[pivotIndex]];
+            ctx.move();
+            ctx.render({ swap: [pivotIndex, end], pivot: [pivotIndex], range: ctxRange(ctx, start, end) });
+            await compareDelay(ctx);
+            return pivotIndex;
+        }
+
+        async function compareMergeSort(ctx, start, end) {
+            if (start >= end) return;
+            const mid = Math.floor((start + end) / 2);
+            await compareMergeSort(ctx, start, mid);
+            await compareMergeSort(ctx, mid + 1, end);
+            await compareMerge(ctx, start, mid, end);
+        }
+
+        async function compareMerge(ctx, start, mid, end) {
+            const a = ctx.array;
+            const left = a.slice(start, mid + 1);
+            const right = a.slice(mid + 1, end + 1);
+            let l = 0, r = 0, m = start;
+            while (l < left.length && r < right.length) {
+                ctx.render({ compare: [start + l, mid + 1 + r], current: [m], range: ctxRange(ctx, start, end) });
+                await compareDelay(ctx);
+                ctx.compare();
+                a[m++] = left[l] <= right[r] ? left[l++] : right[r++];
+                ctx.move();
+            }
+            while (l < left.length) { a[m++] = left[l++]; ctx.move(); ctx.render({ swap: [m - 1], range: ctxRange(ctx, start, end) }); await compareDelay(ctx); }
+            while (r < right.length) { a[m++] = right[r++]; ctx.move(); ctx.render({ swap: [m - 1], range: ctxRange(ctx, start, end) }); await compareDelay(ctx); }
+        }
+
+        async function compareHeap(ctx) {
+            const a = ctx.array;
+            for (let i = Math.floor(a.length / 2) - 1; i >= 0; i--) await compareHeapify(ctx, a.length, i);
+            for (let end = a.length - 1; end > 0; end--) {
+                [a[0], a[end]] = [a[end], a[0]];
+                ctx.move();
+                ctx.render({ swap: [0, end], sorted: ctxSortedTail(ctx, a.length - 1 - end), range: ctxRange(ctx, 0, end) });
+                await compareDelay(ctx);
+                await compareHeapify(ctx, end, 0);
+            }
+        }
+
+        async function compareHeapify(ctx, size, root) {
+            const a = ctx.array;
+            let largest = root;
+            const left = 2 * root + 1;
+            const right = 2 * root + 2;
+            if (left < size) {
+                ctx.render({ compare: [largest, left], range: ctxRange(ctx, 0, size - 1) });
+                await compareDelay(ctx);
+                ctx.compare();
+                if (a[left] > a[largest]) largest = left;
+            }
+            if (right < size) {
+                ctx.render({ compare: [largest, right], range: ctxRange(ctx, 0, size - 1) });
+                await compareDelay(ctx);
+                ctx.compare();
+                if (a[right] > a[largest]) largest = right;
+            }
+            if (largest !== root) {
+                [a[root], a[largest]] = [a[largest], a[root]];
+                ctx.move();
+                ctx.render({ swap: [root, largest], range: ctxRange(ctx, 0, size - 1) });
+                await compareDelay(ctx);
+                await compareHeapify(ctx, size, largest);
+            }
+        }
+
+        async function compareShell(ctx) {
+            const a = ctx.array;
+            let gap = Math.floor(a.length / 2);
+            while (gap > 0) {
+                for (let i = gap; i < a.length; i++) {
+                    const temp = a[i];
+                    let j = i;
+                    while (j >= gap) {
+                        ctx.render({ compare: [j, j - gap], current: [j], range: ctxRange(ctx, 0, a.length - 1) });
+                        await compareDelay(ctx);
+                        ctx.compare();
+                        if (a[j - gap] <= temp) break;
+                        a[j] = a[j - gap];
+                        ctx.move();
+                        j -= gap;
+                    }
+                    a[j] = temp;
+                    ctx.move();
+                }
+                gap = Math.floor(gap / 2);
+            }
+        }
+
+        async function startComparison() {
+            if (isSorting) return;
+            compareBtn.disabled = true;
+            const startingArray = values.length ? [...values] : buildArray();
+            const leftArray = [...startingArray];
+            const rightArray = [...startingArray];
+
+            leftCompareTitle.textContent = algorithms[leftCompareSelect.value];
+            rightCompareTitle.textContent = algorithms[rightCompareSelect.value];
+
+            const leftCtx = makeCompareContext(leftArray, leftCompareBars, document.getElementById("leftComparisons"), document.getElementById("leftSwaps"), document.getElementById("leftTime"));
+            const rightCtx = makeCompareContext(rightArray, rightCompareBars, document.getElementById("rightComparisons"), document.getElementById("rightSwaps"), document.getElementById("rightTime"));
+
+            leftCtx.update();
+            rightCtx.update();
+            leftCtx.render();
+            rightCtx.render();
+
+            await Promise.all([
+                runCompareAlgorithm(leftCompareSelect.value, leftCtx),
+                runCompareAlgorithm(rightCompareSelect.value, rightCtx)
+            ]);
+
+            compareBtn.disabled = false;
         }
 
         randomizeBtn.addEventListener("click", generateArray);
@@ -1025,15 +1240,18 @@
         pauseBtn.addEventListener("click", pauseSort);
         resumeBtn.addEventListener("click", resumeSort);
         stepBtn.addEventListener("click", stepSort);
+        compareBtn.addEventListener("click", startComparison);
 
         algorithmSelect.addEventListener("change", () => {
             updateDescription();
-
             if (!isSorting) {
                 generateArray();
-                statusText.textContent = `${algorithmSelect.options[algorithmSelect.selectedIndex].text} selected. Array randomized.`;
+                statusText.textContent = `${algorithms[algorithmSelect.value]} selected. Array randomized.`;
             }
         });
+
+        leftCompareSelect.addEventListener("change", () => leftCompareTitle.textContent = algorithms[leftCompareSelect.value]);
+        rightCompareSelect.addEventListener("change", () => rightCompareTitle.textContent = algorithms[rightCompareSelect.value]);
 
         sizeSlider.addEventListener("input", () => {
             sizeValue.textContent = sizeSlider.value;
@@ -1043,11 +1261,11 @@
         minValueInput.addEventListener("change", generateArray);
         maxValueInput.addEventListener("change", generateArray);
         arrayTypeSelect.addEventListener("change", generateArray);
+        speedSlider.addEventListener("input", () => speedValue.textContent = `${speedSlider.value}ms`);
 
-        speedSlider.addEventListener("input", () => {
-            speedValue.textContent = `${speedSlider.value}ms`;
-        });
-
+        fillAlgorithmSelect(algorithmSelect, "bubble");
+        fillAlgorithmSelect(leftCompareSelect, "bubble");
+        fillAlgorithmSelect(rightCompareSelect, "quick");
         updateDescription();
         generateArray();
     </script>
