@@ -384,6 +384,8 @@
         <button id="pauseBtn" disabled>Pause</button>
         <button id="resumeBtn" disabled>Resume</button>
         <button id="stepBtn" disabled>Step</button>
+        <button id="copyShareBtn">Copy Share Link</button>
+        <button id="downloadArrayBtn">Download Array</button>
     </div>
 
     <div id="descriptionPanel" class="description"></div>
@@ -474,6 +476,8 @@
         const pauseBtn = document.getElementById("pauseBtn");
         const resumeBtn = document.getElementById("resumeBtn");
         const stepBtn = document.getElementById("stepBtn");
+        const copyShareBtn = document.getElementById("copyShareBtn");
+        const downloadArrayBtn = document.getElementById("downloadArrayBtn");
         const algorithmSelect = document.getElementById("algorithmSelect");
         const sizeSlider = document.getElementById("sizeSlider");
         const minValueInput = document.getElementById("minValueInput");
@@ -716,6 +720,8 @@
             maxValueInput.disabled = sorting;
             arrayTypeSelect.disabled = sorting;
             compareBtn.disabled = sorting;
+            copyShareBtn.disabled = sorting;
+            downloadArrayBtn.disabled = sorting;
             pauseBtn.disabled = !sorting;
             resumeBtn.disabled = true;
             stepBtn.disabled = !sorting;
@@ -1209,6 +1215,93 @@
             }
         }
 
+        function getSettingsForShare() {
+            return {
+                algorithm: algorithmSelect.value,
+                left: leftCompareSelect.value,
+                right: rightCompareSelect.value,
+                size: sizeSlider.value,
+                min: minValueInput.value,
+                max: maxValueInput.value,
+                type: arrayTypeSelect.value,
+                speed: speedSlider.value,
+                values: values.join(",")
+            };
+        }
+
+        function applySettingsFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            if (!params.has("size")) return false;
+
+            algorithmSelect.value = params.get("algorithm") || "bubble";
+            leftCompareSelect.value = params.get("left") || "bubble";
+            rightCompareSelect.value = params.get("right") || "quick";
+            sizeSlider.value = params.get("size") || "40";
+            minValueInput.value = params.get("min") || "20";
+            maxValueInput.value = params.get("max") || "410";
+            arrayTypeSelect.value = params.get("type") || "random";
+            speedSlider.value = params.get("speed") || "60";
+
+            sizeValue.textContent = sizeSlider.value;
+            speedValue.textContent = `${speedSlider.value}ms`;
+            leftCompareTitle.textContent = algorithms[leftCompareSelect.value];
+            rightCompareTitle.textContent = algorithms[rightCompareSelect.value];
+            updateDescription();
+
+            const sharedValues = params.get("values");
+            if (sharedValues) {
+                values = sharedValues
+                    .split(",")
+                    .map(Number)
+                    .filter(value => Number.isFinite(value));
+
+                if (values.length > 0) {
+                    sizeSlider.value = values.length;
+                    sizeValue.textContent = values.length;
+                    resetStats();
+                    renderBars();
+                    renderBarsTo(leftCompareBars, values);
+                    renderBarsTo(rightCompareBars, values);
+                    statusText.textContent = "Shared settings loaded.";
+                    return true;
+                }
+            }
+
+            generateArray();
+            statusText.textContent = "Shared settings loaded.";
+            return true;
+        }
+
+        async function copyShareLink() {
+            const settings = getSettingsForShare();
+            const params = new URLSearchParams(settings);
+            const shareUrl = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+
+            try {
+                await navigator.clipboard.writeText(shareUrl);
+                statusText.textContent = "Share link copied to clipboard.";
+            } catch (error) {
+                statusText.textContent = "Could not copy automatically. Check your browser permissions.";
+            }
+        }
+
+        function downloadArray() {
+            const data = {
+                createdAt: new Date().toISOString(),
+                settings: getSettingsForShare(),
+                values
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "sorting-array.json";
+            link.click();
+            URL.revokeObjectURL(url);
+            statusText.textContent = "Array downloaded.";
+        }
+
         async function startComparison() {
             if (isSorting) return;
             compareBtn.disabled = true;
@@ -1241,6 +1334,8 @@
         resumeBtn.addEventListener("click", resumeSort);
         stepBtn.addEventListener("click", stepSort);
         compareBtn.addEventListener("click", startComparison);
+        copyShareBtn.addEventListener("click", copyShareLink);
+        downloadArrayBtn.addEventListener("click", downloadArray);
 
         algorithmSelect.addEventListener("change", () => {
             updateDescription();
@@ -1267,7 +1362,9 @@
         fillAlgorithmSelect(leftCompareSelect, "bubble");
         fillAlgorithmSelect(rightCompareSelect, "quick");
         updateDescription();
-        generateArray();
+        if (!applySettingsFromUrl()) {
+            generateArray();
+        }
     </script>
 </body>
 </html>
