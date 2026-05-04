@@ -5,6 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sorting Algorithm Visualizer</title>
     <style>
+        :root {
+            --bg: #111827;
+            --text: #f9fafb;
+            --subtle: #9ca3af;
+            --muted: #d1d5db;
+            --panel: #1f2937;
+            --panel-border: #374151;
+            --input-bg: #374151;
+            --chart-bg: #030712;
+            --bar: #3b82f6;
+        }
+
+        body.light {
+            --bg: #f8fafc;
+            --text: #0f172a;
+            --subtle: #64748b;
+            --muted: #334155;
+            --panel: #ffffff;
+            --panel-border: #cbd5e1;
+            --input-bg: #e2e8f0;
+            --chart-bg: #f1f5f9;
+            --bar: #2563eb;
+        }
+
         * {
             box-sizing: border-box;
         }
@@ -12,8 +36,8 @@
         body {
             margin: 0;
             font-family: Arial, sans-serif;
-            background: #111827;
-            color: #f9fafb;
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -32,7 +56,7 @@
         }
 
         .subtitle {
-            color: #9ca3af;
+            color: var(--subtle);
             margin: 0 0 24px;
             text-align: center;
         }
@@ -42,8 +66,8 @@
         .description,
         .compare-card {
             width: min(100%, 1000px);
-            background: #1f2937;
-            border: 1px solid #374151;
+            background: var(--panel);
+            border: 1px solid var(--panel-border);
             border-radius: 12px;
             padding: 16px;
             margin-bottom: 16px;
@@ -62,18 +86,18 @@
             flex-wrap: wrap;
             justify-content: center;
             gap: 18px;
-            color: #d1d5db;
+            color: var(--muted);
         }
 
         .description {
-            color: #d1d5db;
+            color: var(--muted);
             line-height: 1.5;
         }
 
             .description strong,
             .stats strong,
             .compare-card strong {
-                color: #f9fafb;
+                color: var(--text);
             }
 
         button,
@@ -105,15 +129,15 @@
 
         select,
         input {
-            background: #374151;
-            color: white;
+            background: var(--input-bg);
+            color: var(--text);
         }
 
         label {
             display: flex;
             align-items: center;
             gap: 8px;
-            color: #d1d5db;
+            color: var(--muted);
             font-size: 14px;
             min-width: 0;
         }
@@ -134,8 +158,8 @@
 
         #bar-container,
         .compare-bars {
-            background: #030712;
-            border: 1px solid #374151;
+            background: var(--chart-bg);
+            border: 1px solid var(--panel-border);
             border-radius: 12px;
             padding: 12px;
             display: flex;
@@ -151,7 +175,7 @@
 
         .bar {
             flex: 1;
-            background: #3b82f6;
+            background: var(--bar);
             border-radius: 4px 4px 0 0;
             transition: height 0.08s linear, background-color 0.08s linear, box-shadow 0.08s linear, outline 0.08s linear;
         }
@@ -187,7 +211,7 @@
 
         .status {
             margin-top: 16px;
-            color: #d1d5db;
+            color: var(--muted);
             min-height: 24px;
             text-align: center;
         }
@@ -218,7 +242,7 @@
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
             gap: 8px;
-            color: #d1d5db;
+            color: var(--muted);
             font-size: 13px;
             text-align: center;
         }
@@ -380,6 +404,11 @@
             <input id="soundToggle" type="checkbox" />
         </label>
 
+        <label>
+            Light Mode
+            <input id="themeToggle" type="checkbox" />
+        </label>
+
         <button id="sortBtn">Start Sort</button>
         <button id="pauseBtn" disabled>Pause</button>
         <button id="resumeBtn" disabled>Resume</button>
@@ -485,6 +514,7 @@
         const arrayTypeSelect = document.getElementById("arrayTypeSelect");
         const speedSlider = document.getElementById("speedSlider");
         const soundToggle = document.getElementById("soundToggle");
+        const themeToggle = document.getElementById("themeToggle");
         const sizeValue = document.getElementById("sizeValue");
         const speedValue = document.getElementById("speedValue");
         const statusText = document.getElementById("status");
@@ -1225,6 +1255,7 @@
                 max: maxValueInput.value,
                 type: arrayTypeSelect.value,
                 speed: speedSlider.value,
+                theme: themeToggle.checked ? "light" : "dark",
                 values: values.join(",")
             };
         }
@@ -1241,6 +1272,8 @@
             maxValueInput.value = params.get("max") || "410";
             arrayTypeSelect.value = params.get("type") || "random";
             speedSlider.value = params.get("speed") || "60";
+            themeToggle.checked = params.get("theme") === "light";
+            applyTheme();
 
             sizeValue.textContent = sizeSlider.value;
             speedValue.textContent = `${speedSlider.value}ms`;
@@ -1270,6 +1303,10 @@
             generateArray();
             statusText.textContent = "Shared settings loaded.";
             return true;
+        }
+
+        function applyTheme() {
+            document.body.classList.toggle("light", themeToggle.checked);
         }
 
         async function copyShareLink() {
@@ -1336,6 +1373,7 @@
         compareBtn.addEventListener("click", startComparison);
         copyShareBtn.addEventListener("click", copyShareLink);
         downloadArrayBtn.addEventListener("click", downloadArray);
+        themeToggle.addEventListener("change", applyTheme);
 
         algorithmSelect.addEventListener("change", () => {
             updateDescription();
@@ -1362,6 +1400,7 @@
         fillAlgorithmSelect(leftCompareSelect, "bubble");
         fillAlgorithmSelect(rightCompareSelect, "quick");
         updateDescription();
+        applyTheme();
         if (!applySettingsFromUrl()) {
             generateArray();
         }
