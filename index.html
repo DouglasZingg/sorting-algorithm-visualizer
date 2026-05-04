@@ -64,7 +64,8 @@
         .controls,
         .stats,
         .description,
-        .compare-card {
+        .compare-card,
+        .side-panel {
             width: min(100%, 1000px);
             background: var(--panel);
             border: 1px solid var(--panel-border);
@@ -80,6 +81,77 @@
             justify-content: center;
             align-items: center;
         }
+
+        .primary-controls {
+            margin-bottom: 20px;
+        }
+
+        .visualizer-layout {
+            width: min(100%, 1400px);
+            display: grid;
+            grid-template-columns: 220px minmax(0, 1fr) 220px;
+            gap: 16px;
+            align-items: start;
+        }
+
+        .visualizer-main {
+            min-width: 0;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .side-panel {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: sticky;
+            top: 16px;
+        }
+
+            .side-panel h3 {
+                margin: 0 0 4px;
+                font-size: 1rem;
+                color: var(--text);
+                text-align: center;
+            }
+
+            .side-panel label {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 6px;
+            }
+
+            .side-panel .checkbox-label {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .side-panel button,
+            .side-panel select,
+            .side-panel input {
+                width: 100%;
+            }
+
+        .hidden {
+            display: none;
+        }
+
+        .view-section,
+        .comparison-section {
+            width: 100%;
+        }
+
+        .comparison-section {
+            margin-top: 0;
+        }
+
+            .comparison-section:not(.hidden) {
+                display: block;
+            }
 
         .stats {
             display: flex;
@@ -169,7 +241,7 @@
         }
 
         #bar-container {
-            width: min(100%, 1000px);
+            width: 100%;
             height: 420px;
         }
 
@@ -217,7 +289,7 @@
         }
 
         .compare-grid {
-            width: min(100%, 1000px);
+            width: 100%;
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 16px;
@@ -247,6 +319,22 @@
             text-align: center;
         }
 
+        @media (max-width: 1100px) {
+            .visualizer-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .side-panel {
+                position: static;
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+                .side-panel h3 {
+                    grid-column: 1 / -1;
+                }
+        }
+
         @media (max-width: 800px) {
             .controls {
                 display: grid;
@@ -274,6 +362,10 @@
                 text-align: center;
             }
 
+            .side-panel {
+                grid-template-columns: 1fr 1fr;
+            }
+
             .compare-grid {
                 grid-template-columns: 1fr;
             }
@@ -296,14 +388,18 @@
                 grid-template-columns: 1fr;
             }
 
-                .controls label {
-                    flex-wrap: wrap;
-                }
+            .side-panel {
+                grid-template-columns: 1fr;
+            }
 
-                .controls select,
-                .controls input[type="range"] {
-                    width: 100%;
-                }
+            .controls label {
+                flex-wrap: wrap;
+            }
+
+            .controls select,
+            .controls input[type="range"] {
+                width: 100%;
+            }
 
             .stats {
                 grid-template-columns: 1fr;
@@ -333,7 +429,8 @@
             .controls,
             .stats,
             .description,
-            .compare-card {
+            .compare-card,
+            .side-panel {
                 padding: 12px;
             }
 
@@ -359,7 +456,7 @@
     <h1>Sorting Algorithm Visualizer</h1>
     <p class="subtitle">Watch common sorting algorithms compare, swap, move, and finish.</p>
 
-    <div class="controls">
+    <div id="singleTopControls" class="controls primary-controls">
         <button id="randomizeBtn">Randomize</button>
 
         <label>
@@ -374,98 +471,130 @@
         </label>
 
         <label>
-            Min
-            <input id="minValueInput" type="number" min="10" max="390" value="20" />
-        </label>
-
-        <label>
-            Max
-            <input id="maxValueInput" type="number" min="20" max="410" value="410" />
-        </label>
-
-        <label>
-            Array Type
-            <select id="arrayTypeSelect">
-                <option value="random">Random</option>
-                <option value="nearlySorted">Nearly Sorted</option>
-                <option value="reverse">Reverse Sorted</option>
-                <option value="fewUnique">Few Unique Values</option>
-            </select>
-        </label>
-
-        <label>
             Speed
             <input id="speedSlider" type="range" min="5" max="250" value="60" />
             <span id="speedValue">60ms</span>
         </label>
-
-        <label>
-            Sound
-            <input id="soundToggle" type="checkbox" />
-        </label>
-
-        <label>
-            Light Mode
-            <input id="themeToggle" type="checkbox" />
-        </label>
-
-        <button id="sortBtn">Start Sort</button>
-        <button id="pauseBtn" disabled>Pause</button>
-        <button id="resumeBtn" disabled>Resume</button>
-        <button id="stepBtn" disabled>Step</button>
-        <button id="copyShareBtn">Copy Share Link</button>
-        <button id="downloadArrayBtn">Download Array</button>
     </div>
 
-    <div id="descriptionPanel" class="description"></div>
-    <div id="complexityPanel" class="description"></div>
+    <div id="comparisonTopControls" class="controls primary-controls hidden">
+        <button id="compareRandomizeBtn">Randomize</button>
 
-    <div class="stats">
-        <div><strong>Comparisons:</strong> <span id="comparisonCount">0</span></div>
-        <div><strong>Swaps / Moves:</strong> <span id="swapCount">0</span></div>
-        <div><strong>Elapsed:</strong> <span id="elapsedTime">0.00s</span></div>
-    </div>
-
-    <div id="bar-container"></div>
-    <div id="status" class="status">Ready.</div>
-
-    <h2>Side-by-Side Comparison</h2>
-    <p class="subtitle">Compare two algorithms using the same starting array.</p>
-
-    <div class="controls">
         <label>
-            Left
+            Left Algorithm
             <select id="leftCompareSelect"></select>
         </label>
 
         <label>
-            Right
+            Right Algorithm
             <select id="rightCompareSelect"></select>
+        </label>
+
+        <label>
+            Bars
+            <input id="compareSizeSlider" type="range" min="10" max="100" value="40" />
+            <span id="compareSizeValue">40</span>
+        </label>
+
+        <label>
+            Speed
+            <input id="compareSpeedSlider" type="range" min="5" max="250" value="60" />
+            <span id="compareSpeedValue">60ms</span>
         </label>
 
         <button id="compareBtn">Start Comparison</button>
     </div>
 
-    <div class="compare-grid">
-        <div class="compare-card">
-            <h3 id="leftCompareTitle">Bubble Sort</h3>
-            <div class="compare-stats">
-                <div><strong>Comp:</strong> <span id="leftComparisons">0</span></div>
-                <div><strong>Moves:</strong> <span id="leftSwaps">0</span></div>
-                <div><strong>Time:</strong> <span id="leftTime">0.00s</span></div>
-            </div>
-            <div id="leftCompareBars" class="compare-bars"></div>
-        </div>
+    <div class="visualizer-layout">
+        <aside class="side-panel">
+            <h3>Array Options</h3>
 
-        <div class="compare-card">
-            <h3 id="rightCompareTitle">Quick Sort</h3>
-            <div class="compare-stats">
-                <div><strong>Comp:</strong> <span id="rightComparisons">0</span></div>
-                <div><strong>Moves:</strong> <span id="rightSwaps">0</span></div>
-                <div><strong>Time:</strong> <span id="rightTime">0.00s</span></div>
-            </div>
-            <div id="rightCompareBars" class="compare-bars"></div>
-        </div>
+            <label>
+                Minimum Value
+                <input id="minValueInput" type="number" min="10" max="390" value="20" />
+            </label>
+
+            <label>
+                Maximum Value
+                <input id="maxValueInput" type="number" min="20" max="410" value="410" />
+            </label>
+
+            <label>
+                Array Type
+                <select id="arrayTypeSelect">
+                    <option value="random">Random</option>
+                    <option value="nearlySorted">Nearly Sorted</option>
+                    <option value="reverse">Reverse Sorted</option>
+                    <option value="fewUnique">Few Unique Values</option>
+                </select>
+            </label>
+        </aside>
+
+        <main class="visualizer-main">
+            <section id="singleView" class="view-section">
+                <div id="descriptionPanel" class="description"></div>
+                <div id="complexityPanel" class="description"></div>
+
+                <div class="stats">
+                    <div><strong>Comparisons:</strong> <span id="comparisonCount">0</span></div>
+                    <div><strong>Swaps / Moves:</strong> <span id="swapCount">0</span></div>
+                    <div><strong>Elapsed:</strong> <span id="elapsedTime">0.00s</span></div>
+                </div>
+
+                <div id="bar-container"></div>
+                <div id="status" class="status">Ready.</div>
+            </section>
+
+            <section id="comparisonSection" class="comparison-section hidden">
+                <h2>Side-by-Side Comparison</h2>
+                <p class="subtitle">Compare two algorithms using the same starting array.</p>
+
+                <div class="compare-grid">
+                    <div class="compare-card">
+                        <h3 id="leftCompareTitle">Bubble Sort</h3>
+                        <div class="compare-stats">
+                            <div><strong>Comp:</strong> <span id="leftComparisons">0</span></div>
+                            <div><strong>Moves:</strong> <span id="leftSwaps">0</span></div>
+                            <div><strong>Time:</strong> <span id="leftTime">0.00s</span></div>
+                        </div>
+                        <div id="leftCompareBars" class="compare-bars"></div>
+                    </div>
+
+                    <div class="compare-card">
+                        <h3 id="rightCompareTitle">Quick Sort</h3>
+                        <div class="compare-stats">
+                            <div><strong>Comp:</strong> <span id="rightComparisons">0</span></div>
+                            <div><strong>Moves:</strong> <span id="rightSwaps">0</span></div>
+                            <div><strong>Time:</strong> <span id="rightTime">0.00s</span></div>
+                        </div>
+                        <div id="rightCompareBars" class="compare-bars"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <aside class="side-panel">
+            <h3>Run Options</h3>
+
+            <button id="sortBtn">Start Sort</button>
+            <button id="pauseBtn" disabled>Pause</button>
+            <button id="resumeBtn" disabled>Resume</button>
+            <button id="stepBtn" disabled>Step</button>
+
+            <label class="checkbox-label">
+                Enable Sound
+                <input id="soundToggle" type="checkbox" />
+            </label>
+
+            <label class="checkbox-label">
+                Light Mode
+                <input id="themeToggle" type="checkbox" />
+            </label>
+
+            <button id="copyShareBtn">Copy Share Link</button>
+            <button id="downloadArrayBtn">Download Array</button>
+            <button id="toggleCompareBtn">Switch to Comparison View</button>
+        </aside>
     </div>
 
     <script>
@@ -500,7 +629,10 @@
         };
 
         const barContainer = document.getElementById("bar-container");
+        const singleTopControls = document.getElementById("singleTopControls");
+        const comparisonTopControls = document.getElementById("comparisonTopControls");
         const randomizeBtn = document.getElementById("randomizeBtn");
+        const compareRandomizeBtn = document.getElementById("compareRandomizeBtn");
         const sortBtn = document.getElementById("sortBtn");
         const pauseBtn = document.getElementById("pauseBtn");
         const resumeBtn = document.getElementById("resumeBtn");
@@ -526,7 +658,14 @@
 
         const leftCompareSelect = document.getElementById("leftCompareSelect");
         const rightCompareSelect = document.getElementById("rightCompareSelect");
+        const compareSizeSlider = document.getElementById("compareSizeSlider");
+        const compareSpeedSlider = document.getElementById("compareSpeedSlider");
+        const compareSizeValue = document.getElementById("compareSizeValue");
+        const compareSpeedValue = document.getElementById("compareSpeedValue");
         const compareBtn = document.getElementById("compareBtn");
+        const toggleCompareBtn = document.getElementById("toggleCompareBtn");
+        const comparisonSection = document.getElementById("comparisonSection");
+        const singleView = document.getElementById("singleView");
         const leftCompareTitle = document.getElementById("leftCompareTitle");
         const rightCompareTitle = document.getElementById("rightCompareTitle");
         const leftCompareBars = document.getElementById("leftCompareBars");
@@ -542,6 +681,7 @@
         let timerInterval = null;
         let lastTimerTick = 0;
         let audioContext = null;
+        let isComparisonView = false;
 
         function fillAlgorithmSelect(select, defaultValue) {
             select.innerHTML = "";
@@ -562,10 +702,10 @@
             descriptionPanel.innerHTML = descriptions[algo] || "";
             const c = complexities[algo];
             complexityPanel.innerHTML = `
-            <strong>Time Complexity:</strong><br>
-            Best: ${c.best} &nbsp; | &nbsp; Avg: ${c.avg} &nbsp; | &nbsp; Worst: ${c.worst}<br>
-            <strong>Space Complexity:</strong> ${c.space}
-          `;
+                <strong>Time Complexity:</strong><br>
+                Best: ${c.best} &nbsp; | &nbsp; Avg: ${c.avg} &nbsp; | &nbsp; Worst: ${c.worst}<br>
+                <strong>Space Complexity:</strong> ${c.space}
+              `;
         }
 
         function resetStats() {
@@ -743,9 +883,14 @@
         function setSortingState(sorting) {
             isSorting = sorting;
             randomizeBtn.disabled = sorting;
+            compareRandomizeBtn.disabled = sorting;
             sortBtn.disabled = sorting;
             algorithmSelect.disabled = sorting;
+            leftCompareSelect.disabled = sorting;
+            rightCompareSelect.disabled = sorting;
             sizeSlider.disabled = sorting;
+            compareSizeSlider.disabled = sorting;
+            compareSpeedSlider.disabled = sorting;
             minValueInput.disabled = sorting;
             maxValueInput.disabled = sorting;
             arrayTypeSelect.disabled = sorting;
@@ -1245,6 +1390,42 @@
             }
         }
 
+        function syncSingleControlsToCompare() {
+            compareSizeSlider.value = sizeSlider.value;
+            compareSpeedSlider.value = speedSlider.value;
+            compareSizeValue.textContent = sizeSlider.value;
+            compareSpeedValue.textContent = `${speedSlider.value}ms`;
+        }
+
+        function syncCompareControlsToSingle() {
+            sizeSlider.value = compareSizeSlider.value;
+            speedSlider.value = compareSpeedSlider.value;
+            sizeValue.textContent = compareSizeSlider.value;
+            speedValue.textContent = `${compareSpeedSlider.value}ms`;
+        }
+
+        function showSingleView() {
+            isComparisonView = false;
+            singleTopControls.classList.remove("hidden");
+            comparisonTopControls.classList.add("hidden");
+            singleView.classList.remove("hidden");
+            comparisonSection.classList.add("hidden");
+            toggleCompareBtn.textContent = "Switch to Comparison View";
+            renderBars();
+        }
+
+        function showComparisonView() {
+            isComparisonView = true;
+            syncSingleControlsToCompare();
+            singleTopControls.classList.add("hidden");
+            comparisonTopControls.classList.remove("hidden");
+            singleView.classList.add("hidden");
+            comparisonSection.classList.remove("hidden");
+            toggleCompareBtn.textContent = "Switch to Single View";
+            renderBarsTo(leftCompareBars, values);
+            renderBarsTo(rightCompareBars, values);
+        }
+
         function getSettingsForShare() {
             return {
                 algorithm: algorithmSelect.value,
@@ -1256,6 +1437,7 @@
                 type: arrayTypeSelect.value,
                 speed: speedSlider.value,
                 theme: themeToggle.checked ? "light" : "dark",
+                view: isComparisonView ? "comparison" : "single",
                 values: values.join(",")
             };
         }
@@ -1296,12 +1478,22 @@
                     renderBarsTo(leftCompareBars, values);
                     renderBarsTo(rightCompareBars, values);
                     statusText.textContent = "Shared settings loaded.";
+                    if (params.get("view") === "comparison") {
+                        showComparisonView();
+                    } else {
+                        showSingleView();
+                    }
                     return true;
                 }
             }
 
             generateArray();
             statusText.textContent = "Shared settings loaded.";
+            if (params.get("view") === "comparison") {
+                showComparisonView();
+            } else {
+                showSingleView();
+            }
             return true;
         }
 
@@ -1366,11 +1558,24 @@
         }
 
         randomizeBtn.addEventListener("click", generateArray);
+        compareRandomizeBtn.addEventListener("click", () => {
+            syncCompareControlsToSingle();
+            generateArray();
+            syncSingleControlsToCompare();
+        });
         sortBtn.addEventListener("click", startSort);
         pauseBtn.addEventListener("click", pauseSort);
         resumeBtn.addEventListener("click", resumeSort);
         stepBtn.addEventListener("click", stepSort);
         compareBtn.addEventListener("click", startComparison);
+        toggleCompareBtn.addEventListener("click", () => {
+            if (isComparisonView) {
+                syncCompareControlsToSingle();
+                showSingleView();
+            } else {
+                showComparisonView();
+            }
+        });
         copyShareBtn.addEventListener("click", copyShareLink);
         downloadArrayBtn.addEventListener("click", downloadArray);
         themeToggle.addEventListener("change", applyTheme);
@@ -1388,17 +1593,36 @@
 
         sizeSlider.addEventListener("input", () => {
             sizeValue.textContent = sizeSlider.value;
+            compareSizeSlider.value = sizeSlider.value;
+            compareSizeValue.textContent = sizeSlider.value;
             generateArray();
+        });
+
+        compareSizeSlider.addEventListener("input", () => {
+            compareSizeValue.textContent = compareSizeSlider.value;
+            syncCompareControlsToSingle();
+            generateArray();
+            syncSingleControlsToCompare();
         });
 
         minValueInput.addEventListener("change", generateArray);
         maxValueInput.addEventListener("change", generateArray);
         arrayTypeSelect.addEventListener("change", generateArray);
-        speedSlider.addEventListener("input", () => speedValue.textContent = `${speedSlider.value}ms`);
+        speedSlider.addEventListener("input", () => {
+            speedValue.textContent = `${speedSlider.value}ms`;
+            compareSpeedSlider.value = speedSlider.value;
+            compareSpeedValue.textContent = `${speedSlider.value}ms`;
+        });
+
+        compareSpeedSlider.addEventListener("input", () => {
+            compareSpeedValue.textContent = `${compareSpeedSlider.value}ms`;
+            syncCompareControlsToSingle();
+        });
 
         fillAlgorithmSelect(algorithmSelect, "bubble");
         fillAlgorithmSelect(leftCompareSelect, "bubble");
         fillAlgorithmSelect(rightCompareSelect, "quick");
+        syncSingleControlsToCompare();
         updateDescription();
         applyTheme();
         if (!applySettingsFromUrl()) {
